@@ -18,7 +18,6 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
-#include "cmsis_os.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
@@ -43,8 +42,8 @@
 /* Private variables ---------------------------------------------------------*/
 UART_HandleTypeDef huart1;
 
-osThreadId defaultTaskHandle;
 /* USER CODE BEGIN PV */
+int treasureRow, treasureCol;
 
 /* USER CODE END PV */
 
@@ -52,8 +51,6 @@ osThreadId defaultTaskHandle;
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_USART1_UART_Init(void);
-void StartDefaultTask(void const * argument);
-
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
@@ -61,6 +58,56 @@ void StartDefaultTask(void const * argument);
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 
+void PrintInitialGrid(void) {
+    const char newline[] = "\r\n"; // Newline for the terminal
+    char displayBuffer[64];
+
+
+    srand(HAL_GetTick());
+    treasureRow = rand() % 4; // Random row (0-3)
+    treasureCol = rand() % 4; // Random column (0-3)
+
+    // Print a grid of all '1's
+    for (int i = 0; i < 4; i++) {
+        memset(displayBuffer, '1', 4);
+        displayBuffer[4] = '\0';
+        HAL_UART_Transmit(&huart1, (uint8_t *)displayBuffer, strlen(displayBuffer), HAL_MAX_DELAY);
+        HAL_UART_Transmit(&huart1, (uint8_t *)newline, strlen(newline), HAL_MAX_DELAY);
+    }
+}
+
+void PrintTreasureGrid(void) {
+    const char newline[] = "\r\n";
+    char grid[4][4];
+    char treasureBuffer[32];
+    char displayBuffer[64];       // Buffer to send rows over UART
+
+
+    // Initialize the grid with '1's
+    for (int i = 0; i < 4; i++) {
+        for (int j = 0; j < 4; j++) {
+            grid[i][j] = '1';
+        }
+    }
+
+    // Place the treasure ('0') in a random position
+
+    grid[treasureRow][treasureCol] = '0'; // Set the treasure location
+
+    // Log the treasure's location internally
+    snprintf(treasureBuffer, sizeof(treasureBuffer), "Treasure is at: [%d, %d]\r\n", treasureRow+1, treasureCol+1);
+    HAL_UART_Transmit(&huart1, (uint8_t *)treasureBuffer, strlen(treasureBuffer), HAL_MAX_DELAY);
+
+    // Transmit the updated grid
+    for (int i = 0; i < 4; i++) {
+        for (int j = 0; j < 4; j++) {
+            displayBuffer[j] = grid[i][j]; // Copy each character to the buffer
+        }
+        displayBuffer[4] = '\0'; // Null-terminate the string
+        HAL_UART_Transmit(&huart1, (uint8_t *)displayBuffer, strlen(displayBuffer), HAL_MAX_DELAY);
+        HAL_UART_Transmit(&huart1, (uint8_t *)newline, strlen(newline), HAL_MAX_DELAY);
+    }
+}
 /* USER CODE END 0 */
 
 /**
@@ -95,42 +142,20 @@ int main(void)
   MX_USART1_UART_Init();
   /* USER CODE BEGIN 2 */
 
+
+
   /* USER CODE END 2 */
-
-  /* USER CODE BEGIN RTOS_MUTEX */
-  /* add mutexes, ... */
-  /* USER CODE END RTOS_MUTEX */
-
-  /* USER CODE BEGIN RTOS_SEMAPHORES */
-  /* add semaphores, ... */
-  /* USER CODE END RTOS_SEMAPHORES */
-
-  /* USER CODE BEGIN RTOS_TIMERS */
-  /* start timers, add new ones, ... */
-  /* USER CODE END RTOS_TIMERS */
-
-  /* USER CODE BEGIN RTOS_QUEUES */
-  /* add queues, ... */
-  /* USER CODE END RTOS_QUEUES */
-
-  /* Create the thread(s) */
-  /* definition and creation of defaultTask */
-  osThreadDef(defaultTask, StartDefaultTask, osPriorityNormal, 0, 128);
-  defaultTaskHandle = osThreadCreate(osThread(defaultTask), NULL);
-
-  /* USER CODE BEGIN RTOS_THREADS */
-  /* add threads, ... */
-  /* USER CODE END RTOS_THREADS */
-
-  /* Start scheduler */
-  osKernelStart();
-
-  /* We should never get here as control is now taken by the scheduler */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
+  PrintInitialGrid();
+  const char newline[] = "\r\n";
+  HAL_UART_Transmit(&huart1, (uint8_t *)newline, strlen(newline), HAL_MAX_DELAY);
+  PrintTreasureGrid();
   while (1)
   {
+
+
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -247,7 +272,7 @@ static void MX_GPIO_Init(void)
 /* USER CODE END MX_GPIO_Init_1 */
 
   /* GPIO Ports Clock Enable */
-  __HAL_RCC_GPIOA_CLK_ENABLE();
+  __HAL_RCC_GPIOB_CLK_ENABLE();
 
 /* USER CODE BEGIN MX_GPIO_Init_2 */
 /* USER CODE END MX_GPIO_Init_2 */
@@ -256,24 +281,6 @@ static void MX_GPIO_Init(void)
 /* USER CODE BEGIN 4 */
 
 /* USER CODE END 4 */
-
-/* USER CODE BEGIN Header_StartDefaultTask */
-/**
-  * @brief  Function implementing the defaultTask thread.
-  * @param  argument: Not used
-  * @retval None
-  */
-/* USER CODE END Header_StartDefaultTask */
-void StartDefaultTask(void const * argument)
-{
-  /* USER CODE BEGIN 5 */
-  /* Infinite loop */
-  for(;;)
-  {
-    osDelay(1);
-  }
-  /* USER CODE END 5 */
-}
 
 /**
   * @brief  Period elapsed callback in non blocking mode
