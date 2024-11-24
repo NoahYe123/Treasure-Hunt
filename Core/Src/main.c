@@ -56,8 +56,9 @@ const int16_t accelThreshold = 200;
 const float gyroThreshold = 1000.0f;
 
 // movement tracking
+
 // use current as reference
-char currentDirection[10] = "";
+int currentDirection = 0;
 
 // debounce to help with noise
 uint32_t lastChangeTime = 0;
@@ -79,7 +80,7 @@ static void MX_USART1_UART_Init(void);
 /* USER CODE BEGIN 0 */
 
 
-void DetectMovement(void) {
+int DetectMovement(void) {
 	// measure
     float gyroData[3];
     int16_t accelData[3];
@@ -87,37 +88,39 @@ void DetectMovement(void) {
     BSP_ACCELERO_AccGetXYZ(accelData);
 
     // direction string to print
-    char newDirection[10] = "";
+    int newDirection = 0;
 
     // current time
     uint32_t currentTime = HAL_GetTick();
 
     // check tilt
     if (accelData[0] > accelThreshold && gyroData[0] > gyroThreshold) {
-        snprintf(newDirection, sizeof(newDirection), "Up");
+    	newDirection = 1; //up
     } else if (accelData[0] < -accelThreshold && gyroData[0] < -gyroThreshold) {
-        snprintf(newDirection, sizeof(newDirection), "Down");
+    	newDirection = 2; //down
     } else if (accelData[1] > accelThreshold && gyroData[1] > gyroThreshold) {
-        snprintf(newDirection, sizeof(newDirection), "Right");
+    	newDirection = 3; //right
     } else if (accelData[1] < -accelThreshold && gyroData[1] < -gyroThreshold) {
-        snprintf(newDirection, sizeof(newDirection), "Left");
+    	newDirection = 4; //left
     } else {
-        snprintf(newDirection, sizeof(newDirection), "None");
+    	newDirection = 0; //neutral
     }
 
     // only print if change in direction after enough delay (debounce)
-    if (strcmp(newDirection, currentDirection) != 0 && (currentTime - lastChangeTime > debounceTime)) {
+    if ((newDirection != currentDirection) && (currentTime - lastChangeTime > debounceTime)) {
         // update direction
-        snprintf(currentDirection, sizeof(currentDirection), "%s", newDirection);
+    	currentDirection = newDirection;
         lastChangeTime = currentTime;
 
-        // print
-        if (strcmp(currentDirection, "None") != 0) {
+        // print, for debug since we'll return direction
+        if (currentDirection != 0) {
             char buf[50];
-            snprintf(buf, sizeof(buf), "Move %s\r\n", currentDirection);
+            snprintf(buf, sizeof(buf), "Move %d\r\n", currentDirection);
             HAL_UART_Transmit(&huart1, (uint8_t *)buf, strlen(buf), HAL_MAX_DELAY);
         }
     }
+
+    return currentDirection;
 }
 
 void PrintInitialGrid(void) {
