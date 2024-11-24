@@ -50,6 +50,8 @@ UART_HandleTypeDef huart1;
 
 /* USER CODE BEGIN PV */
 int treasureRow, treasureCol;
+int playerRow = 0;
+int playerCol = 0;
 
 // thresholds for movement
 const int16_t accelThreshold = 200;
@@ -96,12 +98,12 @@ int DetectMovement(void) {
     // check tilt
     if (accelData[0] > accelThreshold && gyroData[0] > gyroThreshold) {
     	newDirection = 1; //up
-    } else if (accelData[0] < -accelThreshold && gyroData[0] < -gyroThreshold) {
-    	newDirection = 2; //down
-    } else if (accelData[1] > accelThreshold && gyroData[1] > gyroThreshold) {
-    	newDirection = 3; //right
     } else if (accelData[1] < -accelThreshold && gyroData[1] < -gyroThreshold) {
-    	newDirection = 4; //left
+    	newDirection = 2; //left
+    } else if (accelData[0] < -accelThreshold && gyroData[0] < -gyroThreshold) {
+    	newDirection = 3; //down
+    } else if (accelData[1] > accelThreshold && gyroData[1] > gyroThreshold) {
+    	newDirection = 4; //right
     } else {
     	newDirection = 0; //neutral
     }
