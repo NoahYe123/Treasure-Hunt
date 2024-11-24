@@ -51,6 +51,19 @@ UART_HandleTypeDef huart1;
 /* USER CODE BEGIN PV */
 int treasureRow, treasureCol;
 
+// thresholds for movement
+const int16_t accelThreshold = 200;
+const float gyroThreshold = 1000.0f;
+
+// movement tracking
+// use current as reference
+char currentDirection[10] = "";
+
+// debounce to help with noise
+uint32_t lastChangeTime = 0;
+const uint32_t debounceTime = 500; // Minimum time (ms) between direction changes
+
+
 
 /* USER CODE END PV */
 
@@ -67,6 +80,44 @@ static void MX_USART1_UART_Init(void);
 
 
 void DetectMovement(void) {
+	// measure
+    float gyroData[3];
+    int16_t accelData[3];
+    BSP_GYRO_GetXYZ(gyroData);
+    BSP_ACCELERO_AccGetXYZ(accelData);
+
+    // direction string to print
+    char newDirection[10] = "";
+
+    // current time
+    uint32_t currentTime = HAL_GetTick();
+
+    // check tilt
+    if (accelData[0] > accelThreshold && gyroData[0] > gyroThreshold) {
+        snprintf(newDirection, sizeof(newDirection), "Up");
+    } else if (accelData[0] < -accelThreshold && gyroData[0] < -gyroThreshold) {
+        snprintf(newDirection, sizeof(newDirection), "Down");
+    } else if (accelData[1] > accelThreshold && gyroData[1] > gyroThreshold) {
+        snprintf(newDirection, sizeof(newDirection), "Right");
+    } else if (accelData[1] < -accelThreshold && gyroData[1] < -gyroThreshold) {
+        snprintf(newDirection, sizeof(newDirection), "Left");
+    } else {
+        snprintf(newDirection, sizeof(newDirection), "None");
+    }
+
+    // only print if change in direction after enough delay (debounce)
+    if (strcmp(newDirection, currentDirection) != 0 && (currentTime - lastChangeTime > debounceTime)) {
+        // update direction
+        snprintf(currentDirection, sizeof(currentDirection), "%s", newDirection);
+        lastChangeTime = currentTime;
+
+        // print
+        if (strcmp(currentDirection, "None") != 0) {
+            char buf[50];
+            snprintf(buf, sizeof(buf), "Move %s\r\n", currentDirection);
+            HAL_UART_Transmit(&huart1, (uint8_t *)buf, strlen(buf), HAL_MAX_DELAY);
+        }
+    }
 }
 
 void PrintInitialGrid(void) {
@@ -171,12 +222,7 @@ int main(void)
   while (1)
   {
 	  DetectMovement();
-//	  char buf[50];
-//	  float gyro_read[3];
-//	  BSP_GYRO_GetXYZ(&gyro_read);
-//	  sprintf(buf, "Gyro: [%d, %d, %d]\r\n", (int) gyro_read[0], (int) gyro_read[1], (int) gyro_read[2]);
-//	  HAL_UART_Transmit(&huart1, (uint8_t *) buf, (uint16_t) sizeof(buf), 100);
-	  HAL_Delay(50);
+	  HAL_Delay(100);
 
 
     /* USER CODE END WHILE */
