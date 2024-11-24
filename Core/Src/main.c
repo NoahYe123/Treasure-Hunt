@@ -21,6 +21,12 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include "stm32l4s5i_iot01.h"
+#include "stm32l4s5i_iot01_tsensor.h"
+#include "stm32l4s5i_iot01_gyro.h"
+#include "stm32l4s5i_iot01_accelero.h"
+#include "../../Drivers/Components/hts221/hts221.h"
+#include "../../Drivers/Components/lsm6dsl/lsm6dsl.h"
 
 /* USER CODE END Includes */
 
@@ -45,6 +51,7 @@ UART_HandleTypeDef huart1;
 /* USER CODE BEGIN PV */
 int treasureRow, treasureCol;
 
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -57,6 +64,10 @@ static void MX_USART1_UART_Init(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+
+
+void DetectMovement(void) {
+}
 
 void PrintInitialGrid(void) {
     const char newline[] = "\r\n"; // Newline for the terminal
@@ -108,6 +119,8 @@ void PrintTreasureGrid(void) {
         HAL_UART_Transmit(&huart1, (uint8_t *)newline, strlen(newline), HAL_MAX_DELAY);
     }
 }
+
+
 /* USER CODE END 0 */
 
 /**
@@ -127,6 +140,9 @@ int main(void)
   HAL_Init();
 
   /* USER CODE BEGIN Init */
+  BSP_GYRO_Init();
+  BSP_TSENSOR_Init();
+  BSP_ACCELERO_Init();
 
   /* USER CODE END Init */
 
@@ -154,6 +170,13 @@ int main(void)
   PrintTreasureGrid();
   while (1)
   {
+	  DetectMovement();
+//	  char buf[50];
+//	  float gyro_read[3];
+//	  BSP_GYRO_GetXYZ(&gyro_read);
+//	  sprintf(buf, "Gyro: [%d, %d, %d]\r\n", (int) gyro_read[0], (int) gyro_read[1], (int) gyro_read[2]);
+//	  HAL_UART_Transmit(&huart1, (uint8_t *) buf, (uint16_t) sizeof(buf), 100);
+	  HAL_Delay(50);
 
 
     /* USER CODE END WHILE */

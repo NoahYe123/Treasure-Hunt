@@ -10,6 +10,10 @@ RM := rm -rf
 # All of the sources participating in the build are defined here
 -include sources.mk
 -include Drivers/STM32L4xx_HAL_Driver/Src/subdir.mk
+-include Drivers/Components/lsm6dsl/subdir.mk
+-include Drivers/Components/lps22hb/subdir.mk
+-include Drivers/Components/lis3mdl/subdir.mk
+-include Drivers/Components/hts221/subdir.mk
 -include Core/Startup/subdir.mk
 -include Core/Src/subdir.mk
 -include objects.mk
@@ -60,8 +64,8 @@ all: main-build
 main-build: Treasure_Hunt.elf secondary-outputs
 
 # Tool invocations
-Treasure_Hunt.elf Treasure_Hunt.map: $(OBJS) $(USER_OBJS) /Users/noahye/Desktop/Ecse444/Treasure_Hunt/STM32L4S5VITX_FLASH.ld makefile objects.list $(OPTIONAL_TOOL_DEPS)
-	arm-none-eabi-gcc -o "Treasure_Hunt.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m4 -T"/Users/noahye/Desktop/Ecse444/Treasure_Hunt/STM32L4S5VITX_FLASH.ld" --specs=nosys.specs -Wl,-Map="Treasure_Hunt.map" -Wl,--gc-sections -static --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
+Treasure_Hunt.elf Treasure_Hunt.map: $(OBJS) $(USER_OBJS) /Users/keyan/Documents/GitHub/Treasure-Hunt/STM32L4S5VITX_FLASH.ld makefile objects.list $(OPTIONAL_TOOL_DEPS)
+	arm-none-eabi-gcc -o "Treasure_Hunt.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m4 -T"/Users/keyan/Documents/GitHub/Treasure-Hunt/STM32L4S5VITX_FLASH.ld" --specs=nosys.specs -Wl,-Map="Treasure_Hunt.map" -Wl,--gc-sections -static -u _printf_float --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
 	@echo 'Finished building target: $@'
 	@echo ' '
 
