@@ -153,13 +153,14 @@ void PrintTreasureGrid(void) {
     // Initialize the grid with '1's
     for (int i = 0; i < 4; i++) {
         for (int j = 0; j < 4; j++) {
-            grid[i][j] = '1';
+            grid[i][j] = '.';
         }
     }
 
     // Place the treasure ('0') in a random position
 
-    grid[treasureRow][treasureCol] = '0'; // Set the treasure location
+    grid[treasureRow][treasureCol] = 'x'; // Set the treasure location
+    grid[playerRow][playerCol] = '*'; // Set the player location
 
     // Log the treasure's location internally
     snprintf(treasureBuffer, sizeof(treasureBuffer), "Treasure is at: [%d, %d]\r\n", treasureRow+1, treasureCol+1);
@@ -173,6 +174,53 @@ void PrintTreasureGrid(void) {
         displayBuffer[4] = '\0'; // Null-terminate the string
         HAL_UART_Transmit(&huart1, (uint8_t *)displayBuffer, strlen(displayBuffer), HAL_MAX_DELAY);
         HAL_UART_Transmit(&huart1, (uint8_t *)newline, strlen(newline), HAL_MAX_DELAY);
+    }
+}
+
+void Move(void) {
+    int movement = 0;
+
+    // wait to get a valid direction (not none)
+    while (movement == 0) {
+        movement = DetectMovement();
+        HAL_Delay(50);
+    }
+
+    // move
+    switch (movement) {
+        case 1: // up
+            if (playerRow > 0) {
+                playerRow--;
+            }
+            break;
+        case 2: // right
+            if (playerCol < 3) {
+                playerCol++;
+            }
+            break;
+        case 3: // down
+            if (playerRow < 3) {
+                playerRow++;
+            }
+            break;
+        case 4: // left
+            if (playerCol > 0) {
+                playerCol--;
+            }
+            break;
+        default:
+            break;
+    }
+
+    // show new map
+    PrintTreasureGrid();
+
+    // check if on treasure
+    if (playerRow == treasureRow && playerCol == treasureCol) {
+        const char winMessage[] = "You found the treasure!\r\n";
+        HAL_UART_Transmit(&huart1, (uint8_t *)winMessage, strlen(winMessage), HAL_MAX_DELAY);
+        HAL_Delay(1000);
+        // maybe reset here?
     }
 }
 
@@ -226,8 +274,8 @@ int main(void)
   PrintTreasureGrid();
   while (1)
   {
-	  DetectMovement();
-	  HAL_Delay(100);
+	  Move();
+	  HAL_Delay(5000);
 
 
     /* USER CODE END WHILE */
