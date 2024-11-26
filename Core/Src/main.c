@@ -302,6 +302,38 @@ void Move(void) {
 
         // maybe reset here?
     }
+    else {
+    	if (playerRow > treasureRow && playerCol > treasureCol) {
+    		const char winMessage[] = "The treasure further up, maybe left?\r\n";
+    		HAL_UART_Transmit(&huart1, (uint8_t *)winMessage, strlen(winMessage), HAL_MAX_DELAY);
+    		HAL_Delay(1000);
+    	}
+    	else if(playerRow > treasureRow && playerCol < treasureCol) {
+    		const char winMessage[] = "You should go right up:))\r\n";
+    		HAL_UART_Transmit(&huart1, (uint8_t *)winMessage, strlen(winMessage), HAL_MAX_DELAY);
+    		HAL_Delay(1000);
+    	}
+    	else if(playerRow < treasureRow && playerCol > treasureCol) {
+    		const char winMessage[] = "going up is not ~right~\r\n";
+    		HAL_UART_Transmit(&huart1, (uint8_t *)winMessage, strlen(winMessage), HAL_MAX_DELAY);
+    		HAL_Delay(1000);
+    	}
+    	else if(playerRow < treasureRow && playerCol < treasureCol) {
+    		const char winMessage[] = "further down, right?\r\n";
+    		HAL_UART_Transmit(&huart1, (uint8_t *)winMessage, strlen(winMessage), HAL_MAX_DELAY);
+    		HAL_Delay(1000);
+    	}
+    	else if(playerRow == treasureRow) {
+    		const char winMessage[] = "you're at the right level!\r\n";
+    		HAL_UART_Transmit(&huart1, (uint8_t *)winMessage, strlen(winMessage), HAL_MAX_DELAY);
+    		HAL_Delay(1000);
+    	}
+    	else if(playerCol == treasureCol) {
+    		const char winMessage[] = "you should keep climbing up, or maybe down? you decide.\r\n";
+    		HAL_UART_Transmit(&huart1, (uint8_t *)winMessage, strlen(winMessage), HAL_MAX_DELAY);
+    		HAL_Delay(1000);
+    	}
+    }
 }
 
 
