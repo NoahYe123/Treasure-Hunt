@@ -22,7 +22,6 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "stm32l4s5i_iot01.h"
-#include "stm32l4s5i_iot01_tsensor.h"
 #include "stm32l4s5i_iot01_gyro.h"
 #include "stm32l4s5i_iot01_accelero.h"
 #include "../../Drivers/Components/hts221/hts221.h"
@@ -38,6 +37,10 @@
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
 
+#define PRECISION 4096
+#define NOTE_CAPACITY 42
+
+
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -46,9 +49,43 @@
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
+DAC_HandleTypeDef hdac1;
+DMA_HandleTypeDef hdma_dac1_ch1;
+
+I2C_HandleTypeDef hi2c1;
+
+TIM_HandleTypeDef htim2;
+
 UART_HandleTypeDef huart1;
 
 /* USER CODE BEGIN PV */
+
+int counter = 0;
+int gameover = 0;
+uint32_t array_size[] = {42,38,34,28};
+uint32_t C6[NOTE_CAPACITY];
+uint32_t D6[NOTE_CAPACITY];
+uint32_t E6[NOTE_CAPACITY];
+uint32_t G6[NOTE_CAPACITY];
+
+uint32_t *notes[4];
+
+
+
+uint32_t victoryMelody[] = {
+    0, 2, 3, 0, 3, 0, 0   // C6, E6, G6, C7, G6, C7, C7
+};
+
+uint32_t victoryDurations[] = {
+    500, 500, 500, 500, 300, 300, 1000 // Durations in milliseconds for each note
+};
+
+
+uint32_t victoryLength = 7; // Number of notes in the victory melody
+uint32_t victoryIndex = 0;  // Index to track the current note
+uint32_t dac_array[16];
+
+
 int treasureRow, treasureCol;
 int playerRow = 0;
 int playerCol = 0;
@@ -73,7 +110,11 @@ const uint32_t debounceTime = 500; // Minimum time (ms) between direction change
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
+static void MX_DMA_Init(void);
 static void MX_USART1_UART_Init(void);
+static void MX_TIM2_Init(void);
+static void MX_DAC1_Init(void);
+static void MX_I2C1_Init(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
@@ -191,21 +232,25 @@ void Move(void) {
         case 1: // up
             if (playerRow > 0) {
                 playerRow--;
+                counter++;
             }
             break;
         case 2: // right
             if (playerCol < 3) {
                 playerCol++;
+                counter++;
             }
             break;
         case 3: // down
             if (playerRow < 3) {
                 playerRow++;
+                counter++;
             }
             break;
         case 4: // left
             if (playerCol > 0) {
                 playerCol--;
+                counter++;
             }
             break;
         default:
@@ -220,6 +265,29 @@ void Move(void) {
         const char winMessage[] = "You found the treasure!\r\n";
         HAL_UART_Transmit(&huart1, (uint8_t *)winMessage, strlen(winMessage), HAL_MAX_DELAY);
         HAL_Delay(1000);
+
+
+        for(int i = 0; i< victoryLength; i++){
+
+
+         uint32_t nextNote = victoryMelody[i]; // Get the current note
+   	     uint32_t duration = victoryDurations[i]; // Get the current duration
+
+   	     // Stop the current DMA for buffer
+   	     HAL_DAC_Stop_DMA(&hdac1, DAC_CHANNEL_1);
+
+   	     // Start DMA with the new note
+   	     HAL_DAC_Start_DMA(&hdac1, DAC_CHANNEL_1, notes[nextNote], array_size[nextNote], DAC_ALIGN_12B_R);
+
+   	     // Add a delay for the note duration
+   	     HAL_Delay(duration);
+        }
+
+        HAL_DAC_Stop_DMA(&hdac1, DAC_CHANNEL_1);
+        gameover = 1;
+
+   	     // Increment the index to play the next note
+
         // maybe reset here?
     }
 }
@@ -245,7 +313,6 @@ int main(void)
 
   /* USER CODE BEGIN Init */
   BSP_GYRO_Init();
-  BSP_TSENSOR_Init();
   BSP_ACCELERO_Init();
 
   /* USER CODE END Init */
@@ -259,8 +326,22 @@ int main(void)
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
+  MX_DMA_Init();
   MX_USART1_UART_Init();
+  MX_TIM2_Init();
+  MX_DAC1_Init();
+  MX_I2C1_Init();
   /* USER CODE BEGIN 2 */
+
+  notes[0] = C6;
+   notes[1] = D6;
+   notes[2] = E6;
+   notes[3] = G6;
+
+ for (int i = 0; i<4; i++) {
+  generateArray(notes[i], PRECISION, array_size[i]);
+ }
+
 
 
 
@@ -268,14 +349,21 @@ int main(void)
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
+
+ char countBuffer[32];
+ snprintf(countBuffer, sizeof(countBuffer), "Number of moves: [%d, %d]\r\n", counter);
+ HAL_UART_Transmit(&huart1, (uint8_t *)countBuffer, strlen(countBuffer), HAL_MAX_DELAY);
   PrintInitialGrid();
   const char newline[] = "\r\n";
   HAL_UART_Transmit(&huart1, (uint8_t *)newline, strlen(newline), HAL_MAX_DELAY);
   PrintTreasureGrid();
-  while (1)
+  while (!gameover)
   {
 	  Move();
 	  HAL_Delay(5000);
+
+
+
 
 
     /* USER CODE END WHILE */
@@ -336,6 +424,154 @@ void SystemClock_Config(void)
 }
 
 /**
+  * @brief DAC1 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_DAC1_Init(void)
+{
+
+  /* USER CODE BEGIN DAC1_Init 0 */
+
+  /* USER CODE END DAC1_Init 0 */
+
+  DAC_ChannelConfTypeDef sConfig = {0};
+
+  /* USER CODE BEGIN DAC1_Init 1 */
+
+  /* USER CODE END DAC1_Init 1 */
+
+  /** DAC Initialization
+  */
+  hdac1.Instance = DAC1;
+  if (HAL_DAC_Init(&hdac1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+
+  /** DAC channel OUT1 config
+  */
+  sConfig.DAC_SampleAndHold = DAC_SAMPLEANDHOLD_DISABLE;
+  sConfig.DAC_Trigger = DAC_TRIGGER_T2_TRGO;
+  sConfig.DAC_HighFrequency = DAC_HIGH_FREQUENCY_INTERFACE_MODE_ABOVE_80MHZ;
+  sConfig.DAC_OutputBuffer = DAC_OUTPUTBUFFER_ENABLE;
+  sConfig.DAC_ConnectOnChipPeripheral = DAC_CHIPCONNECT_DISABLE;
+  sConfig.DAC_UserTrimming = DAC_TRIMMING_FACTORY;
+  if (HAL_DAC_ConfigChannel(&hdac1, &sConfig, DAC_CHANNEL_1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+
+  /** DAC channel OUT2 config
+  */
+  sConfig.DAC_Trigger = DAC_TRIGGER_NONE;
+  if (HAL_DAC_ConfigChannel(&hdac1, &sConfig, DAC_CHANNEL_2) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN DAC1_Init 2 */
+
+  /* USER CODE END DAC1_Init 2 */
+
+}
+
+/**
+  * @brief I2C1 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_I2C1_Init(void)
+{
+
+  /* USER CODE BEGIN I2C1_Init 0 */
+
+  /* USER CODE END I2C1_Init 0 */
+
+  /* USER CODE BEGIN I2C1_Init 1 */
+
+  /* USER CODE END I2C1_Init 1 */
+  hi2c1.Instance = I2C1;
+  hi2c1.Init.Timing = 0x30A175AB;
+  hi2c1.Init.OwnAddress1 = 0;
+  hi2c1.Init.AddressingMode = I2C_ADDRESSINGMODE_7BIT;
+  hi2c1.Init.DualAddressMode = I2C_DUALADDRESS_DISABLE;
+  hi2c1.Init.OwnAddress2 = 0;
+  hi2c1.Init.OwnAddress2Masks = I2C_OA2_NOMASK;
+  hi2c1.Init.GeneralCallMode = I2C_GENERALCALL_DISABLE;
+  hi2c1.Init.NoStretchMode = I2C_NOSTRETCH_DISABLE;
+  if (HAL_I2C_Init(&hi2c1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+
+  /** Configure Analogue filter
+  */
+  if (HAL_I2CEx_ConfigAnalogFilter(&hi2c1, I2C_ANALOGFILTER_ENABLE) != HAL_OK)
+  {
+    Error_Handler();
+  }
+
+  /** Configure Digital filter
+  */
+  if (HAL_I2CEx_ConfigDigitalFilter(&hi2c1, 0) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN I2C1_Init 2 */
+
+  /* USER CODE END I2C1_Init 2 */
+
+}
+
+/**
+  * @brief TIM2 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_TIM2_Init(void)
+{
+
+  /* USER CODE BEGIN TIM2_Init 0 */
+
+  /* USER CODE END TIM2_Init 0 */
+
+  TIM_ClockConfigTypeDef sClockSourceConfig = {0};
+  TIM_MasterConfigTypeDef sMasterConfig = {0};
+
+  /* USER CODE BEGIN TIM2_Init 1 */
+
+  /* USER CODE END TIM2_Init 1 */
+  htim2.Instance = TIM2;
+  htim2.Init.Prescaler = 0;
+  htim2.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim2.Init.Period = 2721;
+  htim2.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+  htim2.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  if (HAL_TIM_Base_Init(&htim2) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
+  if (HAL_TIM_ConfigClockSource(&htim2, &sClockSourceConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sMasterConfig.MasterOutputTrigger = TIM_TRGO_UPDATE;
+  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+  if (HAL_TIMEx_MasterConfigSynchronization(&htim2, &sMasterConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN TIM2_Init 2 */
+
+  HAL_TIM_Base_Start_IT(&htim2);
+  HAL_TIM_Base_Start(&htim2);
+
+  /* USER CODE END TIM2_Init 2 */
+
+}
+
+/**
   * @brief USART1 Initialization Function
   * @param None
   * @retval None
@@ -384,6 +620,23 @@ static void MX_USART1_UART_Init(void)
 }
 
 /**
+  * Enable DMA controller clock
+  */
+static void MX_DMA_Init(void)
+{
+
+  /* DMA controller clock enable */
+  __HAL_RCC_DMAMUX1_CLK_ENABLE();
+  __HAL_RCC_DMA1_CLK_ENABLE();
+
+  /* DMA interrupt init */
+  /* DMA1_Channel1_IRQn interrupt configuration */
+  HAL_NVIC_SetPriority(DMA1_Channel1_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(DMA1_Channel1_IRQn);
+
+}
+
+/**
   * @brief GPIO Initialization Function
   * @param None
   * @retval None
@@ -394,6 +647,7 @@ static void MX_GPIO_Init(void)
 /* USER CODE END MX_GPIO_Init_1 */
 
   /* GPIO Ports Clock Enable */
+  __HAL_RCC_GPIOA_CLK_ENABLE();
   __HAL_RCC_GPIOB_CLK_ENABLE();
 
 /* USER CODE BEGIN MX_GPIO_Init_2 */

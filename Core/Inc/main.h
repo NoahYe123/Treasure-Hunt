@@ -31,6 +31,7 @@ extern "C" {
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+void generateArray(uint32_t* dac_array, uint32_t resolution, uint32_t size);
 
 /* USER CODE END Includes */
 
