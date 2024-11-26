@@ -188,35 +188,47 @@ void PrintTreasureGrid(void) {
     const char newline[] = "\r\n";
     char grid[4][4];
     char treasureBuffer[32];
-    char displayBuffer[64];       // Buffer to send rows over UART
+    char displayBuffer[64];  // Buffer to send rows over UART
 
-
-    // Initialize the grid with '1's
+    // Initialize the grid with '.' for empty spaces
     for (int i = 0; i < 4; i++) {
         for (int j = 0; j < 4; j++) {
             grid[i][j] = '.';
         }
     }
 
-    // Place the treasure ('0') in a random position
-
-    grid[treasureRow][treasureCol] = 'x'; // Set the treasure location
-    grid[playerRow][playerCol] = '*'; // Set the player location
+    // Set the treasure ('x') and player ('*') locations
+    grid[treasureRow][treasureCol] = 'x'; // Treasure location
+    grid[playerRow][playerCol] = '*';    // Player location
 
     // Log the treasure's location internally
-    snprintf(treasureBuffer, sizeof(treasureBuffer), "Treasure is at: [%d, %d]\r\n", treasureRow+1, treasureCol+1);
+    snprintf(treasureBuffer, sizeof(treasureBuffer), "Treasure is at: [%d, %d]\r\n", treasureRow + 1, treasureCol + 1);
     HAL_UART_Transmit(&huart1, (uint8_t *)treasureBuffer, strlen(treasureBuffer), HAL_MAX_DELAY);
 
-    // Transmit the updated grid
-    for (int i = 0; i < 4; i++) {
-        for (int j = 0; j < 4; j++) {
-            displayBuffer[j] = grid[i][j]; // Copy each character to the buffer
+    // Transmit the grid with borders
+    for (int i = 0; i <= 4; i++) {  // Includes the top and bottom border
+        if (i == 0) {
+            // Transmit the top/bottom border
+            snprintf(displayBuffer, sizeof(displayBuffer), "+---+---+---+---+\r\n");
+            HAL_UART_Transmit(&huart1, (uint8_t *)displayBuffer, strlen(displayBuffer), HAL_MAX_DELAY);
+        } else {
+            // Transmit a row with cell separators
+            char rowBuffer[32] = "|";  // Start with the first border
+            for (int j = 0; j < 4; j++) {
+                char cell[8];
+                snprintf(cell, sizeof(cell), " %c |", grid[i - 1][j]);  // Add cell content with separators
+                strncat(rowBuffer, cell, sizeof(rowBuffer) - strlen(rowBuffer) - 1);
+            }
+            snprintf(displayBuffer, sizeof(displayBuffer), "%s\r\n", rowBuffer);
+            HAL_UART_Transmit(&huart1, (uint8_t *)displayBuffer, strlen(displayBuffer), HAL_MAX_DELAY);
+
+            // Transmit the horizontal separator
+            snprintf(displayBuffer, sizeof(displayBuffer), "+---+---+---+---+\r\n");
+            HAL_UART_Transmit(&huart1, (uint8_t *)displayBuffer, strlen(displayBuffer), HAL_MAX_DELAY);
         }
-        displayBuffer[4] = '\0'; // Null-terminate the string
-        HAL_UART_Transmit(&huart1, (uint8_t *)displayBuffer, strlen(displayBuffer), HAL_MAX_DELAY);
-        HAL_UART_Transmit(&huart1, (uint8_t *)newline, strlen(newline), HAL_MAX_DELAY);
     }
 }
+
 
 void Move(void) {
     int movement = 0;
@@ -229,25 +241,25 @@ void Move(void) {
 
     // move
     switch (movement) {
-        case 1: // up
+        case 2: // up
             if (playerRow > 0) {
                 playerRow--;
                 counter++;
             }
             break;
-        case 2: // right
+        case 3: // right
             if (playerCol < 3) {
                 playerCol++;
                 counter++;
             }
             break;
-        case 3: // down
+        case 4: // down
             if (playerRow < 3) {
                 playerRow++;
                 counter++;
             }
             break;
-        case 4: // left
+        case 1: // left
             if (playerCol > 0) {
                 playerCol--;
                 counter++;
@@ -350,9 +362,6 @@ int main(void)
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
 
- char countBuffer[32];
- snprintf(countBuffer, sizeof(countBuffer), "Number of moves: [%d, %d]\r\n", counter);
- HAL_UART_Transmit(&huart1, (uint8_t *)countBuffer, strlen(countBuffer), HAL_MAX_DELAY);
   PrintInitialGrid();
   const char newline[] = "\r\n";
   HAL_UART_Transmit(&huart1, (uint8_t *)newline, strlen(newline), HAL_MAX_DELAY);
@@ -360,10 +369,7 @@ int main(void)
   while (!gameover)
   {
 	  Move();
-	  HAL_Delay(5000);
-
-
-
+	  HAL_Delay(1500);
 
 
     /* USER CODE END WHILE */
