@@ -66,7 +66,7 @@ UART_HandleTypeDef huart1;
 
 /* USER CODE BEGIN PV */
 
-int counter = 0;
+uint32_t counter = 0;
 int gameover = 0;
 uint32_t highScore = 0;
 uint32_t array_size[] = {42,38,34,28};
@@ -135,6 +135,9 @@ static void MX_OCTOSPI1_Init(void);
 void SaveHighScore(uint32_t highScore) {
     uint8_t dataToWrite[4];
 
+    // Set the highest bit to indicate that the high score is valid
+    highScore |= (1UL << 31);
+
     // Convert the high score into a 4-byte array
     dataToWrite[0] = (highScore >> 24) & 0xFF;
     dataToWrite[1] = (highScore >> 16) & 0xFF;
@@ -173,7 +176,7 @@ void SaveHighScore(uint32_t highScore) {
 }
 
 
-void LoadHighScore(void) {
+uint32_t LoadHighScore(void) {
     uint8_t dataRead[4]; // Buffer to hold the 4 bytes of high score data
 
     // Initialize QSPI
@@ -191,13 +194,23 @@ void LoadHighScore(void) {
     }
 
     // Combine the 4 bytes into a 32-bit integer
-    highScore = (dataRead[0] << 24) | (dataRead[1] << 16) | (dataRead[2] << 8) | dataRead[3];
+    uint32_t loadedHighScore = (dataRead[0] << 24) | (dataRead[1] << 16) | (dataRead[2] << 8) | dataRead[3];
+
+    // Check if the highest bit (bit 31) is set, indicating a valid high score
+    if ((loadedHighScore & (1UL << 31)) == 0) {
+        // If bit 31 is not set, assume the high score is uninitialized and set it to 0
+        loadedHighScore = 10000;
+    } else {
+        // Clear the highest bit before using the high score value
+        loadedHighScore &= ~(1UL << 31);
+    }
 
     // Print the high score
-    char highScoreBuffer[50];
-    snprintf(highScoreBuffer, sizeof(highScoreBuffer), "High Score: %d\r\n", highScore);
-    HAL_UART_Transmit(&huart1, (uint8_t *)highScoreBuffer, strlen(highScoreBuffer), HAL_MAX_DELAY);
+
+
+    return loadedHighScore; // Return the high score
 }
+
 
 
 
@@ -365,8 +378,11 @@ void Move(void) {
         HAL_UART_Transmit(&huart1, (uint8_t *)winMessage, strlen(winMessage), HAL_MAX_DELAY);
         HAL_Delay(1000);
 
+        if(counter < LoadHighScore()){
+
         SaveHighScore(counter);
 
+        }
 
 
 
@@ -483,8 +499,9 @@ int main(void)
  }
 
 
-  LoadHighScore();
-
+ char highScoreBuffer[50];
+ snprintf(highScoreBuffer, sizeof(highScoreBuffer), "High Score: %d\r\n", LoadHighScore());
+ HAL_UART_Transmit(&huart1, (uint8_t *)highScoreBuffer, strlen(highScoreBuffer), HAL_MAX_DELAY);
 
 
 
