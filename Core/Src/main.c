@@ -1,9 +1,9 @@
 /* USER CODE BEGIN Header */
 /**
-  ******************************************************************************
+  ****************************************************************************
   * @file           : main.c
   * @brief          : Main program body
-  ******************************************************************************
+  ****************************************************************************
   * @attention
   *
   * Copyright (c) 2024 STMicroelectronics.
@@ -13,7 +13,7 @@
   * in the root directory of this software component.
   * If no LICENSE file comes with this software, it is provided AS-IS.
   *
-  ******************************************************************************
+  ****************************************************************************
   */
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
@@ -26,6 +26,7 @@
 #include "stm32l4s5i_iot01_accelero.h"
 #include "../../Drivers/Components/hts221/hts221.h"
 #include "../../Drivers/Components/lsm6dsl/lsm6dsl.h"
+#include "stm32l4s5i_iot01_qspi.h"
 
 /* USER CODE END Includes */
 
@@ -39,6 +40,9 @@
 
 #define PRECISION 4096
 #define NOTE_CAPACITY 42
+#define HIGHSCORE_FLASH_ADDRESS 0x00000000 // Change this to a specific flash address
+
+
 
 
 /* USER CODE END PD */
@@ -54,6 +58,8 @@ DMA_HandleTypeDef hdma_dac1_ch1;
 
 I2C_HandleTypeDef hi2c1;
 
+OSPI_HandleTypeDef hospi1;
+
 TIM_HandleTypeDef htim2;
 
 UART_HandleTypeDef huart1;
@@ -62,6 +68,7 @@ UART_HandleTypeDef huart1;
 
 int counter = 0;
 int gameover = 0;
+uint32_t highScore = 0;
 uint32_t array_size[] = {42,38,34,28};
 uint32_t C6[NOTE_CAPACITY];
 uint32_t D6[NOTE_CAPACITY];
@@ -115,12 +122,87 @@ static void MX_USART1_UART_Init(void);
 static void MX_TIM2_Init(void);
 static void MX_DAC1_Init(void);
 static void MX_I2C1_Init(void);
+static void MX_OCTOSPI1_Init(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+
+
+
+void SaveHighScore(uint32_t highScore) {
+    uint8_t dataToWrite[4];
+
+    // Convert the high score into a 4-byte array
+    dataToWrite[0] = (highScore >> 24) & 0xFF;
+    dataToWrite[1] = (highScore >> 16) & 0xFF;
+    dataToWrite[2] = (highScore >> 8) & 0xFF;
+    dataToWrite[3] = highScore & 0xFF;
+
+    if (BSP_QSPI_Init() != QSPI_OK) {
+        HAL_UART_Transmit(&huart1, (uint8_t *)"QSPI Init Failed\r\n", 18, HAL_MAX_DELAY);
+        Error_Handler();
+    }
+
+    HAL_UART_Transmit(&huart1, (uint8_t *)"QSPI Init Success\r\n", 20, HAL_MAX_DELAY);
+
+    // Erase the flash sector containing the high score
+    if (BSP_QSPI_Erase_Sector(HIGHSCORE_FLASH_ADDRESS) != QSPI_OK) {
+        HAL_UART_Transmit(&huart1, (uint8_t *)"QSPI Erase Failed\r\n", 19, HAL_MAX_DELAY);
+        Error_Handler();
+    }
+
+    HAL_UART_Transmit(&huart1, (uint8_t *)"QSPI Erase Command Sent\r\n", 25, HAL_MAX_DELAY);
+
+    // Wait for the erase operation to complete
+    while (BSP_QSPI_GetStatus() == QSPI_BUSY) {
+        HAL_Delay(10);
+    }
+
+    HAL_UART_Transmit(&huart1, (uint8_t *)"QSPI Erase Completed\r\n", 23, HAL_MAX_DELAY);
+
+    // Write the high score to the flash memory
+    if (BSP_QSPI_Write(dataToWrite, HIGHSCORE_FLASH_ADDRESS, sizeof(dataToWrite)) != QSPI_OK) {
+        HAL_UART_Transmit(&huart1, (uint8_t *)"QSPI Write Failed\r\n", 20, HAL_MAX_DELAY);
+        Error_Handler();
+    }
+
+    HAL_UART_Transmit(&huart1, (uint8_t *)"High Score Saved\r\n", 18, HAL_MAX_DELAY);
+}
+
+
+void LoadHighScore(void) {
+    uint8_t dataRead[4]; // Buffer to hold the 4 bytes of high score data
+
+    // Initialize QSPI
+    if (BSP_QSPI_Init() != QSPI_OK) {
+        HAL_UART_Transmit(&huart1, (uint8_t *)"QSPI Init Failed\r\n", 18, HAL_MAX_DELAY);
+        Error_Handler();
+    }
+
+    HAL_UART_Transmit(&huart1, (uint8_t *)"QSPI Init Success\r\n", 20, HAL_MAX_DELAY);
+
+    // Read high score from flash memory
+    if (BSP_QSPI_Read(dataRead, HIGHSCORE_FLASH_ADDRESS, sizeof(dataRead)) != QSPI_OK) {
+        HAL_UART_Transmit(&huart1, (uint8_t *)"QSPI Read Failed\r\n", 19, HAL_MAX_DELAY);
+        Error_Handler();
+    }
+
+    // Combine the 4 bytes into a 32-bit integer
+    highScore = (dataRead[0] << 24) | (dataRead[1] << 16) | (dataRead[2] << 8) | dataRead[3];
+
+    // Print the high score
+    char highScoreBuffer[50];
+    snprintf(highScoreBuffer, sizeof(highScoreBuffer), "High Score: %d\r\n", highScore);
+    HAL_UART_Transmit(&huart1, (uint8_t *)highScoreBuffer, strlen(highScoreBuffer), HAL_MAX_DELAY);
+}
+
+
+
+
+
 
 
 int DetectMovement(void) {
@@ -272,11 +354,24 @@ void Move(void) {
     // show new map
     PrintTreasureGrid();
 
+    // print the updated number of moves
+    char counterBuffer[50];
+    snprintf(counterBuffer, sizeof(counterBuffer), "Moves made: %d\r\n", counter);
+    HAL_UART_Transmit(&huart1, (uint8_t *)counterBuffer, strlen(counterBuffer), HAL_MAX_DELAY);
+
     // check if on treasure
     if (playerRow == treasureRow && playerCol == treasureCol) {
         const char winMessage[] = "You found the treasure!\r\n";
         HAL_UART_Transmit(&huart1, (uint8_t *)winMessage, strlen(winMessage), HAL_MAX_DELAY);
         HAL_Delay(1000);
+
+        SaveHighScore(counter);
+
+
+
+
+
+
 
 
         for(int i = 0; i< victoryLength; i++){
@@ -375,6 +470,7 @@ int main(void)
   MX_TIM2_Init();
   MX_DAC1_Init();
   MX_I2C1_Init();
+  MX_OCTOSPI1_Init();
   /* USER CODE BEGIN 2 */
 
   notes[0] = C6;
@@ -387,6 +483,10 @@ int main(void)
  }
 
 
+  LoadHighScore();
+
+
+
 
 
   /* USER CODE END 2 */
@@ -395,6 +495,8 @@ int main(void)
   /* USER CODE BEGIN WHILE */
 
   PrintInitialGrid();
+  // Print the updated number of moves
+
   const char newline[] = "\r\n";
   HAL_UART_Transmit(&huart1, (uint8_t *)newline, strlen(newline), HAL_MAX_DELAY);
   PrintTreasureGrid();
@@ -562,6 +664,54 @@ static void MX_I2C1_Init(void)
 }
 
 /**
+  * @brief OCTOSPI1 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_OCTOSPI1_Init(void)
+{
+
+  /* USER CODE BEGIN OCTOSPI1_Init 0 */
+
+  /* USER CODE END OCTOSPI1_Init 0 */
+
+  OSPIM_CfgTypeDef OSPIM_Cfg_Struct = {0};
+
+  /* USER CODE BEGIN OCTOSPI1_Init 1 */
+
+  /* USER CODE END OCTOSPI1_Init 1 */
+  /* OCTOSPI1 parameter configuration*/
+  hospi1.Instance = OCTOSPI1;
+  hospi1.Init.FifoThreshold = 1;
+  hospi1.Init.DualQuad = HAL_OSPI_DUALQUAD_DISABLE;
+  hospi1.Init.MemoryType = HAL_OSPI_MEMTYPE_MICRON;
+  hospi1.Init.DeviceSize = 23;
+  hospi1.Init.ChipSelectHighTime = 1;
+  hospi1.Init.FreeRunningClock = HAL_OSPI_FREERUNCLK_DISABLE;
+  hospi1.Init.ClockMode = HAL_OSPI_CLOCK_MODE_0;
+  hospi1.Init.ClockPrescaler = 1;
+  hospi1.Init.SampleShifting = HAL_OSPI_SAMPLE_SHIFTING_HALFCYCLE;
+  hospi1.Init.DelayHoldQuarterCycle = HAL_OSPI_DHQC_DISABLE;
+  hospi1.Init.ChipSelectBoundary = 0;
+  hospi1.Init.DelayBlockBypass = HAL_OSPI_DELAY_BLOCK_BYPASSED;
+  if (HAL_OSPI_Init(&hospi1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  OSPIM_Cfg_Struct.ClkPort = 1;
+  OSPIM_Cfg_Struct.NCSPort = 1;
+  OSPIM_Cfg_Struct.IOLowPort = HAL_OSPIM_IOPORT_1_LOW;
+  if (HAL_OSPIM_Config(&hospi1, &OSPIM_Cfg_Struct, HAL_OSPI_TIMEOUT_DEFAULT_VALUE) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN OCTOSPI1_Init 2 */
+
+  /* USER CODE END OCTOSPI1_Init 2 */
+
+}
+
+/**
   * @brief TIM2 Initialization Function
   * @param None
   * @retval None
@@ -686,6 +836,7 @@ static void MX_GPIO_Init(void)
 
   /* GPIO Ports Clock Enable */
   __HAL_RCC_GPIOA_CLK_ENABLE();
+  __HAL_RCC_GPIOE_CLK_ENABLE();
   __HAL_RCC_GPIOB_CLK_ENABLE();
 
 /* USER CODE BEGIN MX_GPIO_Init_2 */

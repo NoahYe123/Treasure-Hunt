@@ -26,6 +26,7 @@ Core/Src/main.o: ../Core/Src/main.c ../Core/Inc/main.h \
  ../Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal_flash_ramfunc.h \
  ../Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal_i2c.h \
  ../Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal_i2c_ex.h \
+ ../Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal_ospi.h \
  ../Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal_pwr.h \
  ../Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal_pwr_ex.h \
  ../Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal_tim.h \
@@ -34,14 +35,16 @@ Core/Src/main.o: ../Core/Src/main.c ../Core/Inc/main.h \
  ../Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal_uart_ex.h \
  ../Core/Inc/stm32l4s5i_iot01.h ../Core/Inc/stm32l4s5i_iot01_gyro.h \
  ../Core/Inc/stm32l4s5i_iot01.h \
- /Users/keyan/Documents/GitHub/Treasure-Hunt/Drivers/Components/../Components/lsm6dsl/lsm6dsl.h \
- /Users/keyan/Documents/GitHub/Treasure-Hunt/Drivers/Components/../Components/lsm6dsl/../Common/accelero.h \
- /Users/keyan/Documents/GitHub/Treasure-Hunt/Drivers/Components/../Components/lsm6dsl/../Common/gyro.h \
+ /Users/noahye/Desktop/Ecse444/Treasure_Hunt/Drivers/Components/../Components/lsm6dsl/lsm6dsl.h \
+ /Users/noahye/Desktop/Ecse444/Treasure_Hunt/Drivers/Components/../Components/lsm6dsl/../Common/accelero.h \
+ /Users/noahye/Desktop/Ecse444/Treasure_Hunt/Drivers/Components/../Components/lsm6dsl/../Common/gyro.h \
  ../Core/Inc/stm32l4s5i_iot01_accelero.h \
  ../Core/Src/../../Drivers/Components/hts221/hts221.h \
  ../Core/Src/../../Drivers/Components/hts221/../Common/hsensor.h \
  ../Core/Src/../../Drivers/Components/hts221/../Common/tsensor.h \
- ../Core/Src/../../Drivers/Components/lsm6dsl/lsm6dsl.h
+ ../Core/Src/../../Drivers/Components/lsm6dsl/lsm6dsl.h \
+ ../Core/Inc/stm32l4s5i_iot01_qspi.h \
+ /Users/noahye/Desktop/Ecse444/Treasure_Hunt/Drivers/Components/../Components/mx25r6435f/mx25r6435f.h
 ../Core/Inc/main.h:
 ../Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal.h:
 ../Core/Inc/stm32l4xx_hal_conf.h:
@@ -70,6 +73,7 @@ Core/Src/main.o: ../Core/Src/main.c ../Core/Inc/main.h \
 ../Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal_flash_ramfunc.h:
 ../Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal_i2c.h:
 ../Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal_i2c_ex.h:
+../Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal_ospi.h:
 ../Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal_pwr.h:
 ../Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal_pwr_ex.h:
 ../Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal_tim.h:
@@ -79,11 +83,13 @@ Core/Src/main.o: ../Core/Src/main.c ../Core/Inc/main.h \
 ../Core/Inc/stm32l4s5i_iot01.h:
 ../Core/Inc/stm32l4s5i_iot01_gyro.h:
 ../Core/Inc/stm32l4s5i_iot01.h:
-/Users/keyan/Documents/GitHub/Treasure-Hunt/Drivers/Components/../Components/lsm6dsl/lsm6dsl.h:
-/Users/keyan/Documents/GitHub/Treasure-Hunt/Drivers/Components/../Components/lsm6dsl/../Common/accelero.h:
-/Users/keyan/Documents/GitHub/Treasure-Hunt/Drivers/Components/../Components/lsm6dsl/../Common/gyro.h:
+/Users/noahye/Desktop/Ecse444/Treasure_Hunt/Drivers/Components/../Components/lsm6dsl/lsm6dsl.h:
+/Users/noahye/Desktop/Ecse444/Treasure_Hunt/Drivers/Components/../Components/lsm6dsl/../Common/accelero.h:
+/Users/noahye/Desktop/Ecse444/Treasure_Hunt/Drivers/Components/../Components/lsm6dsl/../Common/gyro.h:
 ../Core/Inc/stm32l4s5i_iot01_accelero.h:
 ../Core/Src/../../Drivers/Components/hts221/hts221.h:
 ../Core/Src/../../Drivers/Components/hts221/../Common/hsensor.h:
 ../Core/Src/../../Drivers/Components/hts221/../Common/tsensor.h:
 ../Core/Src/../../Drivers/Components/lsm6dsl/lsm6dsl.h:
+../Core/Inc/stm32l4s5i_iot01_qspi.h:
+/Users/noahye/Desktop/Ecse444/Treasure_Hunt/Drivers/Components/../Components/mx25r6435f/mx25r6435f.h:
