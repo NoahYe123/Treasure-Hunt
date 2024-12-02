@@ -40,7 +40,9 @@
 
 #define PRECISION 4096
 #define NOTE_CAPACITY 42
-#define HIGHSCORE_FLASH_ADDRESS 0x00000000 // Change this to a specific flash address
+#define HIGHSCORE_FLASH_ADDRESS 0x00000000
+#define SEED_FLASH_ADDRESS 0x00000400
+#define DEFAULT_SEED 28
 
 
 
@@ -211,12 +213,55 @@ uint32_t LoadHighScore(void) {
     return loadedHighScore; // Return the high score
 }
 
+void SaveSeed(uint32_t seed) {
+    uint8_t dataToWrite[4];
 
+    dataToWrite[0] = (seed >> 24) & 0xFF;
+    dataToWrite[1] = (seed >> 16) & 0xFF;
+    dataToWrite[2] = (seed >> 8) & 0xFF;
+    dataToWrite[3] = seed & 0xFF;
 
+    if (BSP_QSPI_Init() != QSPI_OK) {
+        HAL_UART_Transmit(&huart1, (uint8_t *)"QSPI Init Failed\r\n", 18, HAL_MAX_DELAY);
+        Error_Handler();
+    }
 
+    if (BSP_QSPI_Erase_Sector(SEED_FLASH_ADDRESS) != QSPI_OK) {
+        HAL_UART_Transmit(&huart1, (uint8_t *)"QSPI Erase Failed\r\n", 19, HAL_MAX_DELAY);
+        Error_Handler();
+    }
 
+    while (BSP_QSPI_GetStatus() == QSPI_BUSY) {
+        HAL_Delay(10);
+    }
 
+    if (BSP_QSPI_Write(dataToWrite, SEED_FLASH_ADDRESS, sizeof(dataToWrite)) != QSPI_OK) {
+        HAL_UART_Transmit(&huart1, (uint8_t *)"QSPI Write Failed\r\n", 20, HAL_MAX_DELAY);
+        Error_Handler();
+    }
+}
 
+uint32_t LoadSeed(void) {
+    uint8_t dataRead[4];
+
+    if (BSP_QSPI_Init() != QSPI_OK) {
+        HAL_UART_Transmit(&huart1, (uint8_t *)"QSPI Init Failed\r\n", 18, HAL_MAX_DELAY);
+        Error_Handler();
+    }
+
+    if (BSP_QSPI_Read(dataRead, SEED_FLASH_ADDRESS, sizeof(dataRead)) != QSPI_OK) {
+        HAL_UART_Transmit(&huart1, (uint8_t *)"QSPI Read Failed\r\n", 19, HAL_MAX_DELAY);
+        Error_Handler();
+    }
+
+    uint32_t seed = (dataRead[0] << 24) | (dataRead[1] << 16) | (dataRead[2] << 8) | dataRead[3];
+
+    if (seed == 0xFFFFFFFF) {
+        seed = DEFAULT_SEED;
+    }
+
+    return seed;
+}
 
 int DetectMovement(void) {
 	// measure
@@ -266,7 +311,10 @@ void PrintInitialGrid(void) {
     char displayBuffer[64];
 
 
-    srand(HAL_GetTick());
+    uint32_t seed = LoadSeed();
+    srand(seed);
+    uint32_t nextSeed = rand();
+    SaveSeed(nextSeed);
     treasureRow = rand() % 4; // Random row (0-3)
     treasureCol = rand() % 4; // Random column (0-3)
 
