@@ -42,7 +42,7 @@
 #define NOTE_CAPACITY 42
 #define HIGHSCORE_FLASH_ADDRESS 0x00000000
 #define SEED_FLASH_ADDRESS 0x00000400
-#define DEFAULT_SEED 28
+#define DEFAULT_SEED 40
 
 
 
@@ -112,7 +112,8 @@ int currentDirection = 0;
 uint32_t lastChangeTime = 0;
 const uint32_t debounceTime = 500; // Minimum time (ms) between direction changes
 
-
+int sizeRow;
+int sizeCol;
 
 /* USER CODE END PV */
 
@@ -151,7 +152,7 @@ void SaveHighScore(uint32_t highScore) {
         Error_Handler();
     }
 
-    HAL_UART_Transmit(&huart1, (uint8_t *)"QSPI Init Success\r\n", 20, HAL_MAX_DELAY);
+//    HAL_UART_Transmit(&huart1, (uint8_t *)"QSPI Init Success\r\n", 20, HAL_MAX_DELAY);
 
     // Erase the flash sector containing the high score
     if (BSP_QSPI_Erase_Sector(HIGHSCORE_FLASH_ADDRESS) != QSPI_OK) {
@@ -159,14 +160,14 @@ void SaveHighScore(uint32_t highScore) {
         Error_Handler();
     }
 
-    HAL_UART_Transmit(&huart1, (uint8_t *)"QSPI Erase Command Sent\r\n", 25, HAL_MAX_DELAY);
+//    HAL_UART_Transmit(&huart1, (uint8_t *)"QSPI Erase Command Sent\r\n", 25, HAL_MAX_DELAY);
 
     // Wait for the erase operation to complete
     while (BSP_QSPI_GetStatus() == QSPI_BUSY) {
         HAL_Delay(10);
     }
 
-    HAL_UART_Transmit(&huart1, (uint8_t *)"QSPI Erase Completed\r\n", 23, HAL_MAX_DELAY);
+//    HAL_UART_Transmit(&huart1, (uint8_t *)"QSPI Erase Completed\r\n", 23, HAL_MAX_DELAY);
 
     // Write the high score to the flash memory
     if (BSP_QSPI_Write(dataToWrite, HIGHSCORE_FLASH_ADDRESS, sizeof(dataToWrite)) != QSPI_OK) {
@@ -321,48 +322,46 @@ void PrintInitialGrid(void) {
 
 void PrintTreasureGrid(void) {
     const char newline[] = "\r\n";
-    char grid[4][4];
-    char treasureBuffer[32];
-    char displayBuffer[64];  // Buffer to send rows over UART
+    char displayBuffer[128];
+    char grid[sizeRow][sizeCol];
 
-    // Initialize the grid with '.' for empty spaces
-    for (int i = 0; i < 4; i++) {
-        for (int j = 0; j < 4; j++) {
+    for (int i = 0; i < sizeRow; i++) {
+        for (int j = 0; j < sizeCol; j++) {
             grid[i][j] = '.';
         }
     }
 
-    // Set the treasure ('x') and player ('*') locations
-//    grid[treasureRow][treasureCol] = 'x'; // Treasure location
-    grid[playerRow][playerCol] = '*';    // Player location
+    grid[playerRow][playerCol] = '*';
+    grid[treasureRow][treasureCol] = 'x';
 
-    // Log the treasure's location internally
-//    snprintf(treasureBuffer, sizeof(treasureBuffer), "Treasure is at: [%d, %d]\r\n", treasureRow + 1, treasureCol + 1);
-//    HAL_UART_Transmit(&huart1, (uint8_t *)treasureBuffer, strlen(treasureBuffer), HAL_MAX_DELAY);
 
-    // Transmit the grid with borders
-    for (int i = 0; i <= 4; i++) {  // Includes the top and bottom border
-        if (i == 0) {
-            // Transmit the top/bottom border
-            snprintf(displayBuffer, sizeof(displayBuffer), "+---+---+---+---+\r\n");
-            HAL_UART_Transmit(&huart1, (uint8_t *)displayBuffer, strlen(displayBuffer), HAL_MAX_DELAY);
-        } else {
-            // Transmit a row with cell separators
-            char rowBuffer[32] = "|";  // Start with the first border
-            for (int j = 0; j < 4; j++) {
-                char cell[8];
-                snprintf(cell, sizeof(cell), " %c |", grid[i - 1][j]);  // Add cell content with separators
-                strncat(rowBuffer, cell, sizeof(rowBuffer) - strlen(rowBuffer) - 1);
-            }
-            snprintf(displayBuffer, sizeof(displayBuffer), "%s\r\n", rowBuffer);
-            HAL_UART_Transmit(&huart1, (uint8_t *)displayBuffer, strlen(displayBuffer), HAL_MAX_DELAY);
+    // Print the top border
+    snprintf(displayBuffer, sizeof(displayBuffer), "+");
+    for (int j = 0; j < sizeCol; j++) {
+        strncat(displayBuffer, "---+", sizeof(displayBuffer) - strlen(displayBuffer) - 1);
+    }
+    strncat(displayBuffer, newline, sizeof(displayBuffer) - strlen(displayBuffer) - 1);
+    HAL_UART_Transmit(&huart1, (uint8_t *)displayBuffer, strlen(displayBuffer), HAL_MAX_DELAY);
 
-            // Transmit the horizontal separator
-            snprintf(displayBuffer, sizeof(displayBuffer), "+---+---+---+---+\r\n");
-            HAL_UART_Transmit(&huart1, (uint8_t *)displayBuffer, strlen(displayBuffer), HAL_MAX_DELAY);
+    for (int i = 0; i < sizeRow; i++) {
+        char rowBuffer[32] = "|";
+        for (int j = 0; j < sizeCol; j++) {
+            char cell[8];
+            snprintf(cell, sizeof(cell), " %c |", grid[i][j]);
+            strncat(rowBuffer, cell, sizeof(rowBuffer) - strlen(rowBuffer) - 1);
         }
+        snprintf(displayBuffer, sizeof(displayBuffer), "%s\r\n", rowBuffer);
+        HAL_UART_Transmit(&huart1, (uint8_t *)displayBuffer, strlen(displayBuffer), HAL_MAX_DELAY);
+
+        snprintf(displayBuffer, sizeof(displayBuffer), "+");
+        for (int j = 0; j < sizeCol; j++) {
+            strncat(displayBuffer, "---+", sizeof(displayBuffer) - strlen(displayBuffer) - 1);
+        }
+        strncat(displayBuffer, newline, sizeof(displayBuffer) - strlen(displayBuffer) - 1);
+        HAL_UART_Transmit(&huart1, (uint8_t *)displayBuffer, strlen(displayBuffer), HAL_MAX_DELAY);
     }
 }
+
 
 
 void Move(void) {
@@ -383,13 +382,13 @@ void Move(void) {
             }
             break;
         case 3: // right
-            if (playerCol < 3) {
+            if (playerCol < sizeCol) {
                 playerCol++;
                 counter++;
             }
             break;
         case 4: // down
-            if (playerRow < 3) {
+            if (playerRow < sizeRow) {
                 playerRow++;
                 counter++;
             }
@@ -512,8 +511,16 @@ int main(void)
   srand(seed);
   uint32_t nextSeed = rand();
   SaveSeed(nextSeed);
-  treasureRow = rand() % 4; // Random row (0-3)
-  treasureCol = rand() % 4; // Random column (0-3)
+
+  sizeRow = rand()%6 + 4;
+  sizeCol = rand()%6 + 4;
+
+  // Print sizeRow and sizeCol
+  char debugBuffer[50];
+  snprintf(debugBuffer, sizeof(debugBuffer), "Col: %d, Row: %d\r\n", sizeCol, sizeRow);
+  HAL_UART_Transmit(&huart1, (uint8_t *)debugBuffer, strlen(debugBuffer), HAL_MAX_DELAY);
+  treasureRow = rand() % sizeRow; // Random row (0-3)
+  treasureCol = rand() % sizeCol; // Random column (0-3)
 //  uint32_t resetHS = 1000;
 //  SaveHighScore(resetHS);
   BSP_GYRO_Init();
