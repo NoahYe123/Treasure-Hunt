@@ -147,7 +147,7 @@ void SaveHighScore(uint32_t highScore) {
     dataToWrite[3] = highScore & 0xFF;
 
     if (BSP_QSPI_Init() != QSPI_OK) {
-        HAL_UART_Transmit(&huart1, (uint8_t *)"QSPI Init Failed\r\n", 18, HAL_MAX_DELAY);
+//        HAL_UART_Transmit(&huart1, (uint8_t *)"QSPI Init Failed\r\n", 18, HAL_MAX_DELAY);
         Error_Handler();
     }
 
@@ -155,7 +155,7 @@ void SaveHighScore(uint32_t highScore) {
 
     // Erase the flash sector containing the high score
     if (BSP_QSPI_Erase_Sector(HIGHSCORE_FLASH_ADDRESS) != QSPI_OK) {
-        HAL_UART_Transmit(&huart1, (uint8_t *)"QSPI Erase Failed\r\n", 19, HAL_MAX_DELAY);
+//        HAL_UART_Transmit(&huart1, (uint8_t *)"QSPI Erase Failed\r\n", 19, HAL_MAX_DELAY);
         Error_Handler();
     }
 
@@ -170,7 +170,7 @@ void SaveHighScore(uint32_t highScore) {
 
     // Write the high score to the flash memory
     if (BSP_QSPI_Write(dataToWrite, HIGHSCORE_FLASH_ADDRESS, sizeof(dataToWrite)) != QSPI_OK) {
-        HAL_UART_Transmit(&huart1, (uint8_t *)"QSPI Write Failed\r\n", 20, HAL_MAX_DELAY);
+//        HAL_UART_Transmit(&huart1, (uint8_t *)"QSPI Write Failed\r\n", 20, HAL_MAX_DELAY);
         Error_Handler();
     }
 
@@ -183,7 +183,7 @@ uint32_t LoadHighScore(void) {
 
     // Initialize QSPI
     if (BSP_QSPI_Init() != QSPI_OK) {
-        HAL_UART_Transmit(&huart1, (uint8_t *)"QSPI Init Failed\r\n", 18, HAL_MAX_DELAY);
+//        HAL_UART_Transmit(&huart1, (uint8_t *)"QSPI Init Failed\r\n", 18, HAL_MAX_DELAY);
         Error_Handler();
     }
 
@@ -191,7 +191,7 @@ uint32_t LoadHighScore(void) {
 
     // Read high score from flash memory
     if (BSP_QSPI_Read(dataRead, HIGHSCORE_FLASH_ADDRESS, sizeof(dataRead)) != QSPI_OK) {
-        HAL_UART_Transmit(&huart1, (uint8_t *)"QSPI Read Failed\r\n", 19, HAL_MAX_DELAY);
+//        HAL_UART_Transmit(&huart1, (uint8_t *)"QSPI Read Failed\r\n", 19, HAL_MAX_DELAY);
         Error_Handler();
     }
 
@@ -200,7 +200,7 @@ uint32_t LoadHighScore(void) {
 
     // Check if the highest bit (bit 31) is set, indicating a valid high score
     if ((loadedHighScore & (1UL << 31)) == 0) {
-        // If bit 31 is not set, assume the high score is uninitialized and set it to 0
+        // If bit 31 is not set, assume the high score is uninitialized and set it to 1000
         loadedHighScore = 10000;
     } else {
         // Clear the highest bit before using the high score value
@@ -222,12 +222,12 @@ void SaveSeed(uint32_t seed) {
     dataToWrite[3] = seed & 0xFF;
 
     if (BSP_QSPI_Init() != QSPI_OK) {
-        HAL_UART_Transmit(&huart1, (uint8_t *)"QSPI Init Failed\r\n", 18, HAL_MAX_DELAY);
+//        HAL_UART_Transmit(&huart1, (uint8_t *)"QSPI Init Failed\r\n", 18, HAL_MAX_DELAY);
         Error_Handler();
     }
 
     if (BSP_QSPI_Erase_Sector(SEED_FLASH_ADDRESS) != QSPI_OK) {
-        HAL_UART_Transmit(&huart1, (uint8_t *)"QSPI Erase Failed\r\n", 19, HAL_MAX_DELAY);
+//        HAL_UART_Transmit(&huart1, (uint8_t *)"QSPI Erase Failed\r\n", 19, HAL_MAX_DELAY);
         Error_Handler();
     }
 
@@ -236,7 +236,7 @@ void SaveSeed(uint32_t seed) {
     }
 
     if (BSP_QSPI_Write(dataToWrite, SEED_FLASH_ADDRESS, sizeof(dataToWrite)) != QSPI_OK) {
-        HAL_UART_Transmit(&huart1, (uint8_t *)"QSPI Write Failed\r\n", 20, HAL_MAX_DELAY);
+//        HAL_UART_Transmit(&huart1, (uint8_t *)"QSPI Write Failed\r\n", 20, HAL_MAX_DELAY);
         Error_Handler();
     }
 }
@@ -245,12 +245,12 @@ uint32_t LoadSeed(void) {
     uint8_t dataRead[4];
 
     if (BSP_QSPI_Init() != QSPI_OK) {
-        HAL_UART_Transmit(&huart1, (uint8_t *)"QSPI Init Failed\r\n", 18, HAL_MAX_DELAY);
+//        HAL_UART_Transmit(&huart1, (uint8_t *)"QSPI Init Failed\r\n", 18, HAL_MAX_DELAY);
         Error_Handler();
     }
 
     if (BSP_QSPI_Read(dataRead, SEED_FLASH_ADDRESS, sizeof(dataRead)) != QSPI_OK) {
-        HAL_UART_Transmit(&huart1, (uint8_t *)"QSPI Read Failed\r\n", 19, HAL_MAX_DELAY);
+//        HAL_UART_Transmit(&huart1, (uint8_t *)"QSPI Read Failed\r\n", 19, HAL_MAX_DELAY);
         Error_Handler();
     }
 
@@ -310,14 +310,6 @@ void PrintInitialGrid(void) {
     const char newline[] = "\r\n"; // Newline for the terminal
     char displayBuffer[64];
 
-
-    uint32_t seed = LoadSeed();
-    srand(seed);
-    uint32_t nextSeed = rand();
-    SaveSeed(nextSeed);
-    treasureRow = rand() % 4; // Random row (0-3)
-    treasureCol = rand() % 4; // Random column (0-3)
-
     // Print a grid of all '1's
     for (int i = 0; i < 4; i++) {
         memset(displayBuffer, '1', 4);
@@ -341,12 +333,12 @@ void PrintTreasureGrid(void) {
     }
 
     // Set the treasure ('x') and player ('*') locations
-    grid[treasureRow][treasureCol] = 'x'; // Treasure location
+//    grid[treasureRow][treasureCol] = 'x'; // Treasure location
     grid[playerRow][playerCol] = '*';    // Player location
 
     // Log the treasure's location internally
-    snprintf(treasureBuffer, sizeof(treasureBuffer), "Treasure is at: [%d, %d]\r\n", treasureRow + 1, treasureCol + 1);
-    HAL_UART_Transmit(&huart1, (uint8_t *)treasureBuffer, strlen(treasureBuffer), HAL_MAX_DELAY);
+//    snprintf(treasureBuffer, sizeof(treasureBuffer), "Treasure is at: [%d, %d]\r\n", treasureRow + 1, treasureCol + 1);
+//    HAL_UART_Transmit(&huart1, (uint8_t *)treasureBuffer, strlen(treasureBuffer), HAL_MAX_DELAY);
 
     // Transmit the grid with borders
     for (int i = 0; i <= 4; i++) {  // Includes the top and bottom border
@@ -515,6 +507,15 @@ int main(void)
   HAL_Init();
 
   /* USER CODE BEGIN Init */
+
+  uint32_t seed = LoadSeed();
+  srand(seed);
+  uint32_t nextSeed = rand();
+  SaveSeed(nextSeed);
+  treasureRow = rand() % 4; // Random row (0-3)
+  treasureCol = rand() % 4; // Random column (0-3)
+//  uint32_t resetHS = 1000;
+//  SaveHighScore(resetHS);
   BSP_GYRO_Init();
   BSP_ACCELERO_Init();
 
@@ -551,15 +552,12 @@ int main(void)
  snprintf(highScoreBuffer, sizeof(highScoreBuffer), "High Score: %d\r\n", LoadHighScore());
  HAL_UART_Transmit(&huart1, (uint8_t *)highScoreBuffer, strlen(highScoreBuffer), HAL_MAX_DELAY);
 
-
-
-
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
 
-  PrintInitialGrid();
+//  PrintInitialGrid();
   // Print the updated number of moves
 
   const char newline[] = "\r\n";
