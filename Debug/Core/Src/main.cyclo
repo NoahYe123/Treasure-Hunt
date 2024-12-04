@@ -2,7 +2,7 @@
 ../Core/Src/main.c:181:10:LoadHighScore	4
 ../Core/Src/main.c:216:6:SaveSeed	5
 ../Core/Src/main.c:250:10:LoadSeed	4
-../Core/Src/main.c:278:5:DetectMovement	12
+../Core/Src/main.c:278:5:DetectMovement	11
 ../Core/Src/main.c:323:6:PrintInitialGrid	2
 ../Core/Src/main.c:336:6:PrintTreasureGrid	6
 ../Core/Src/main.c:382:6:Move	24

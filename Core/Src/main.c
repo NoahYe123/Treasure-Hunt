@@ -151,7 +151,7 @@ void SaveHighScore(uint32_t highScore) {
         Error_Handler();
     }
 
-    HAL_UART_Transmit(&huart1, (uint8_t *)"QSPI Init Success\r\n", 20, HAL_MAX_DELAY);
+//    HAL_UART_Transmit(&huart1, (uint8_t *)"QSPI Init Success\r\n", 20, HAL_MAX_DELAY);
 
     // Erase the flash sector containing the high score
     if (BSP_QSPI_Erase_Sector(HIGHSCORE_FLASH_ADDRESS) != QSPI_OK) {
@@ -159,7 +159,7 @@ void SaveHighScore(uint32_t highScore) {
         Error_Handler();
     }
 
-    HAL_UART_Transmit(&huart1, (uint8_t *)"QSPI Erase Command Sent\r\n", 25, HAL_MAX_DELAY);
+//    HAL_UART_Transmit(&huart1, (uint8_t *)"QSPI Erase Command Sent\r\n", 25, HAL_MAX_DELAY);
 
     // Wait for the erase operation to complete
     while (BSP_QSPI_GetStatus() == QSPI_BUSY) {
@@ -187,7 +187,7 @@ uint32_t LoadHighScore(void) {
         Error_Handler();
     }
 
-    HAL_UART_Transmit(&huart1, (uint8_t *)"QSPI Init Success\r\n", 20, HAL_MAX_DELAY);
+//    HAL_UART_Transmit(&huart1, (uint8_t *)"QSPI Init Success\r\n", 20, HAL_MAX_DELAY);
 
     // Read high score from flash memory
     if (BSP_QSPI_Read(dataRead, HIGHSCORE_FLASH_ADDRESS, sizeof(dataRead)) != QSPI_OK) {
@@ -222,12 +222,12 @@ void SaveSeed(uint32_t seed) {
     dataToWrite[3] = seed & 0xFF;
 
     if (BSP_QSPI_Init() != QSPI_OK) {
-        HAL_UART_Transmit(&huart1, (uint8_t *)"QSPI Init Failed\r\n", 18, HAL_MAX_DELAY);
+//        HAL_UART_Transmit(&huart1, (uint8_t *)"QSPI Init Failed\r\n", 18, HAL_MAX_DELAY);
         Error_Handler();
     }
 
     if (BSP_QSPI_Erase_Sector(SEED_FLASH_ADDRESS) != QSPI_OK) {
-        HAL_UART_Transmit(&huart1, (uint8_t *)"QSPI Erase Failed\r\n", 19, HAL_MAX_DELAY);
+//        HAL_UART_Transmit(&huart1, (uint8_t *)"QSPI Erase Failed\r\n", 19, HAL_MAX_DELAY);
         Error_Handler();
     }
 
@@ -236,27 +236,27 @@ void SaveSeed(uint32_t seed) {
     }
 
     if (BSP_QSPI_Write(dataToWrite, SEED_FLASH_ADDRESS, sizeof(dataToWrite)) != QSPI_OK) {
-        HAL_UART_Transmit(&huart1, (uint8_t *)"QSPI Write Failed\r\n", 20, HAL_MAX_DELAY);
+//        HAL_UART_Transmit(&huart1, (uint8_t *)"QSPI Write Failed\r\n", 20, HAL_MAX_DELAY);
         Error_Handler();
     }
 
     // Print the bytes being saved
-    char seedDataBuffer[64];
-    snprintf(seedDataBuffer, sizeof(seedDataBuffer), "Saving Seed: %lu [Bytes: 0x%02X 0x%02X 0x%02X 0x%02X]\r\n",
-             seed, dataToWrite[0], dataToWrite[1], dataToWrite[2], dataToWrite[3]);
-    HAL_UART_Transmit(&huart1, (uint8_t *)seedDataBuffer, strlen(seedDataBuffer), HAL_MAX_DELAY);
+//    char seedDataBuffer[64];
+//    snprintf(seedDataBuffer, sizeof(seedDataBuffer), "Saving Seed: %lu [Bytes: 0x%02X 0x%02X 0x%02X 0x%02X]\r\n",
+//             seed, dataToWrite[0], dataToWrite[1], dataToWrite[2], dataToWrite[3]);
+//    HAL_UART_Transmit(&huart1, (uint8_t *)seedDataBuffer, strlen(seedDataBuffer), HAL_MAX_DELAY);
 }
 
 uint32_t LoadSeed(void) {
     uint8_t dataRead[4];
 
     if (BSP_QSPI_Init() != QSPI_OK) {
-        HAL_UART_Transmit(&huart1, (uint8_t *)"QSPI Init Failed\r\n", 18, HAL_MAX_DELAY);
+//        HAL_UART_Transmit(&huart1, (uint8_t *)"QSPI Init Failed\r\n", 18, HAL_MAX_DELAY);
         Error_Handler();
     }
 
     if (BSP_QSPI_Read(dataRead, SEED_FLASH_ADDRESS, sizeof(dataRead)) != QSPI_OK) {
-        HAL_UART_Transmit(&huart1, (uint8_t *)"QSPI Read Failed\r\n", 19, HAL_MAX_DELAY);
+//        HAL_UART_Transmit(&huart1, (uint8_t *)"QSPI Read Failed\r\n", 19, HAL_MAX_DELAY);
         Error_Handler();
     }
 
@@ -267,10 +267,10 @@ uint32_t LoadSeed(void) {
     }
 
     // Print the bytes being loaded
-    char seedDataBuffer[64];
-    snprintf(seedDataBuffer, sizeof(seedDataBuffer), "Loaded Seed: %lu [Bytes: 0x%02X 0x%02X 0x%02X 0x%02X]\r\n",
-             seed, dataRead[0], dataRead[1], dataRead[2], dataRead[3]);
-    HAL_UART_Transmit(&huart1, (uint8_t *)seedDataBuffer, strlen(seedDataBuffer), HAL_MAX_DELAY);
+//    char seedDataBuffer[64];
+//    snprintf(seedDataBuffer, sizeof(seedDataBuffer), "Loaded Seed: %lu [Bytes: 0x%02X 0x%02X 0x%02X 0x%02X]\r\n",
+//             seed, dataRead[0], dataRead[1], dataRead[2], dataRead[3]);
+//    HAL_UART_Transmit(&huart1, (uint8_t *)seedDataBuffer, strlen(seedDataBuffer), HAL_MAX_DELAY);
 
     return seed;
 }
@@ -311,9 +311,9 @@ int DetectMovement(void) {
 
         // print, for debug since we'll return direction
         if (currentDirection != 0) {
-            char buf[50];
-            snprintf(buf, sizeof(buf), "Move %d\r\n", currentDirection);
-            HAL_UART_Transmit(&huart1, (uint8_t *)buf, strlen(buf), HAL_MAX_DELAY);
+//            char buf[50];
+//            snprintf(buf, sizeof(buf), "Move %d\r\n", currentDirection);
+//            HAL_UART_Transmit(&huart1, (uint8_t *)buf, strlen(buf), HAL_MAX_DELAY);
         }
     }
 
@@ -567,9 +567,9 @@ int main(void)
   uint32_t combinedSeed = (gyroX ^ gyroY ^ gyroZ) + (accelX ^ accelY ^ accelZ);
 
   // Log the generated seed
-  char seedBuffer[64];
-  snprintf(seedBuffer, sizeof(seedBuffer), "Generated Seed: %lu\r\n", combinedSeed);
-  HAL_UART_Transmit(&huart1, (uint8_t *)seedBuffer, strlen(seedBuffer), HAL_MAX_DELAY);
+//  char seedBuffer[64];
+//  snprintf(seedBuffer, sizeof(seedBuffer), "Generated Seed: %lu\r\n", combinedSeed);
+//  HAL_UART_Transmit(&huart1, (uint8_t *)seedBuffer, strlen(seedBuffer), HAL_MAX_DELAY);
 
   // Seed the random number generator
   srand(combinedSeed);

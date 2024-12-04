@@ -1,12 +1,12 @@
 ../Core/Src/main.c:137:6:SaveHighScore	24	static
 ../Core/Src/main.c:181:10:LoadHighScore	16	static
-../Core/Src/main.c:216:6:SaveSeed	112	static
-../Core/Src/main.c:250:10:LoadSeed	104	static
-../Core/Src/main.c:278:5:DetectMovement	88	static
+../Core/Src/main.c:216:6:SaveSeed	24	static
+../Core/Src/main.c:250:10:LoadSeed	16	static
+../Core/Src/main.c:278:5:DetectMovement	40	static
 ../Core/Src/main.c:323:6:PrintInitialGrid	80	static
 ../Core/Src/main.c:336:6:PrintTreasureGrid	184	static
 ../Core/Src/main.c:382:6:Move	296	static
-../Core/Src/main.c:511:5:main	184	static
+../Core/Src/main.c:511:5:main	120	static
 ../Core/Src/main.c:627:6:SystemClock_Config	96	static
 ../Core/Src/main.c:678:13:MX_DAC1_Init	48	static
 ../Core/Src/main.c:730:13:MX_I2C1_Init	8	static
