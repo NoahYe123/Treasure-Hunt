@@ -41,7 +41,7 @@
 #define PRECISION 4096
 #define NOTE_CAPACITY 42
 #define HIGHSCORE_FLASH_ADDRESS 0x00000000
-#define SEED_FLASH_ADDRESS 0x00000400
+#define SEED_FLASH_ADDRESS 0x00000500
 #define DEFAULT_SEED 28
 
 
@@ -222,12 +222,12 @@ void SaveSeed(uint32_t seed) {
     dataToWrite[3] = seed & 0xFF;
 
     if (BSP_QSPI_Init() != QSPI_OK) {
-//        HAL_UART_Transmit(&huart1, (uint8_t *)"QSPI Init Failed\r\n", 18, HAL_MAX_DELAY);
+        HAL_UART_Transmit(&huart1, (uint8_t *)"QSPI Init Failed\r\n", 18, HAL_MAX_DELAY);
         Error_Handler();
     }
 
     if (BSP_QSPI_Erase_Sector(SEED_FLASH_ADDRESS) != QSPI_OK) {
-//        HAL_UART_Transmit(&huart1, (uint8_t *)"QSPI Erase Failed\r\n", 19, HAL_MAX_DELAY);
+        HAL_UART_Transmit(&huart1, (uint8_t *)"QSPI Erase Failed\r\n", 19, HAL_MAX_DELAY);
         Error_Handler();
     }
 
@@ -236,21 +236,27 @@ void SaveSeed(uint32_t seed) {
     }
 
     if (BSP_QSPI_Write(dataToWrite, SEED_FLASH_ADDRESS, sizeof(dataToWrite)) != QSPI_OK) {
-//        HAL_UART_Transmit(&huart1, (uint8_t *)"QSPI Write Failed\r\n", 20, HAL_MAX_DELAY);
+        HAL_UART_Transmit(&huart1, (uint8_t *)"QSPI Write Failed\r\n", 20, HAL_MAX_DELAY);
         Error_Handler();
     }
+
+    // Print the bytes being saved
+    char seedDataBuffer[64];
+    snprintf(seedDataBuffer, sizeof(seedDataBuffer), "Saving Seed: %lu [Bytes: 0x%02X 0x%02X 0x%02X 0x%02X]\r\n",
+             seed, dataToWrite[0], dataToWrite[1], dataToWrite[2], dataToWrite[3]);
+    HAL_UART_Transmit(&huart1, (uint8_t *)seedDataBuffer, strlen(seedDataBuffer), HAL_MAX_DELAY);
 }
 
 uint32_t LoadSeed(void) {
     uint8_t dataRead[4];
 
     if (BSP_QSPI_Init() != QSPI_OK) {
-//        HAL_UART_Transmit(&huart1, (uint8_t *)"QSPI Init Failed\r\n", 18, HAL_MAX_DELAY);
+        HAL_UART_Transmit(&huart1, (uint8_t *)"QSPI Init Failed\r\n", 18, HAL_MAX_DELAY);
         Error_Handler();
     }
 
     if (BSP_QSPI_Read(dataRead, SEED_FLASH_ADDRESS, sizeof(dataRead)) != QSPI_OK) {
-//        HAL_UART_Transmit(&huart1, (uint8_t *)"QSPI Read Failed\r\n", 19, HAL_MAX_DELAY);
+        HAL_UART_Transmit(&huart1, (uint8_t *)"QSPI Read Failed\r\n", 19, HAL_MAX_DELAY);
         Error_Handler();
     }
 
@@ -260,6 +266,12 @@ uint32_t LoadSeed(void) {
         seed = DEFAULT_SEED;
     }
 
+    // Print the bytes being loaded
+    char seedDataBuffer[64];
+    snprintf(seedDataBuffer, sizeof(seedDataBuffer), "Loaded Seed: %lu [Bytes: 0x%02X 0x%02X 0x%02X 0x%02X]\r\n",
+             seed, dataRead[0], dataRead[1], dataRead[2], dataRead[3]);
+    HAL_UART_Transmit(&huart1, (uint8_t *)seedDataBuffer, strlen(seedDataBuffer), HAL_MAX_DELAY);
+
     return seed;
 }
 
@@ -267,6 +279,8 @@ int DetectMovement(void) {
 	// measure
     float gyroData[3];
     int16_t accelData[3];
+
+
     BSP_GYRO_GetXYZ(gyroData);
     BSP_ACCELERO_AccGetXYZ(accelData);
 
@@ -333,7 +347,7 @@ void PrintTreasureGrid(void) {
     }
 
     // Set the treasure ('x') and player ('*') locations
-//    grid[treasureRow][treasureCol] = 'x'; // Treasure location
+    grid[treasureRow][treasureCol] = 'x'; // Treasure location
     grid[playerRow][playerCol] = '*';    // Player location
 
     // Log the treasure's location internally
@@ -508,12 +522,7 @@ int main(void)
 
   /* USER CODE BEGIN Init */
 
-  uint32_t seed = LoadSeed();
-  srand(seed);
-  uint32_t nextSeed = rand();
-  SaveSeed(nextSeed);
-  treasureRow = rand() % 4; // Random row (0-3)
-  treasureCol = rand() % 4; // Random column (0-3)
+
 //  uint32_t resetHS = 1000;
 //  SaveHighScore(resetHS);
   BSP_GYRO_Init();
@@ -538,7 +547,41 @@ int main(void)
   MX_OCTOSPI1_Init();
   /* USER CODE BEGIN 2 */
 
-  notes[0] = C6;
+  float gyroData[3];
+  int16_t accelData[3];
+
+  // Get Gyroscope and Accelerometer data
+  BSP_GYRO_GetXYZ(gyroData);
+  BSP_ACCELERO_AccGetXYZ(accelData);
+
+  // Combine gyro and accel data into a new seed
+  uint32_t gyroX = (uint32_t)gyroData[0];
+  uint32_t gyroY = (uint32_t)gyroData[1];
+  uint32_t gyroZ = (uint32_t)gyroData[2];
+
+  uint32_t accelX = (uint32_t)accelData[0];
+  uint32_t accelY = (uint32_t)accelData[1];
+  uint32_t accelZ = (uint32_t)accelData[2];
+
+  // Generate a seed by combining gyro and accel values
+  uint32_t combinedSeed = (gyroX ^ gyroY ^ gyroZ) + (accelX ^ accelY ^ accelZ);
+
+  // Log the generated seed
+  char seedBuffer[64];
+  snprintf(seedBuffer, sizeof(seedBuffer), "Generated Seed: %lu\r\n", combinedSeed);
+  HAL_UART_Transmit(&huart1, (uint8_t *)seedBuffer, strlen(seedBuffer), HAL_MAX_DELAY);
+
+  // Seed the random number generator
+  srand(combinedSeed);
+
+  // Save the new seed for the next program run
+  SaveSeed(combinedSeed);
+
+  // Generate random treasure positions
+  treasureRow = rand() % 4; // Random row (0-3)
+  treasureCol = rand() % 4; // Random column (0-3)
+
+   notes[0] = C6;
    notes[1] = D6;
    notes[2] = E6;
    notes[3] = G6;
@@ -552,6 +595,8 @@ int main(void)
  snprintf(highScoreBuffer, sizeof(highScoreBuffer), "High Score: %d\r\n", LoadHighScore());
  HAL_UART_Transmit(&huart1, (uint8_t *)highScoreBuffer, strlen(highScoreBuffer), HAL_MAX_DELAY);
 
+ PrintTreasureGrid();
+
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -562,7 +607,6 @@ int main(void)
 
   const char newline[] = "\r\n";
   HAL_UART_Transmit(&huart1, (uint8_t *)newline, strlen(newline), HAL_MAX_DELAY);
-  PrintTreasureGrid();
   while (!gameover)
   {
 	  Move();
