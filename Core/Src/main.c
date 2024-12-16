@@ -68,9 +68,18 @@ UART_HandleTypeDef huart1;
 
 /* USER CODE BEGIN PV */
 
+//  ---------- map generation and player progress ----------
+
 uint32_t counter = 0;
 int gameover = 0;
 uint32_t highScore = 0;
+
+int treasureRow, treasureCol;
+int playerRow = 0;
+int playerCol = 0;
+
+// ---------- victory chime ----------
+
 uint32_t array_size[] = {42,38,34,28};
 uint32_t C6[NOTE_CAPACITY];
 uint32_t D6[NOTE_CAPACITY];
@@ -78,8 +87,6 @@ uint32_t E6[NOTE_CAPACITY];
 uint32_t G6[NOTE_CAPACITY];
 
 uint32_t *notes[4];
-
-
 
 uint32_t victoryMelody[] = {
     0, 2, 3, 0, 3, 0, 0   // C6, E6, G6, C7, G6, C7, C7
@@ -94,23 +101,18 @@ uint32_t victoryLength = 7; // Number of notes in the victory melody
 uint32_t victoryIndex = 0;  // Index to track the current note
 uint32_t dac_array[16];
 
-
-int treasureRow, treasureCol;
-int playerRow = 0;
-int playerCol = 0;
+// ---------- movement tracking ----------
 
 // thresholds for movement
 const int16_t accelThreshold = 200;
 const float gyroThreshold = 1000.0f;
 
-// movement tracking
-
-// use current as reference
+// use current as reference for movement change
 int currentDirection = 0;
 
 // debounce to help with noise
 uint32_t lastChangeTime = 0;
-const uint32_t debounceTime = 500; // Minimum time (ms) between direction changes
+const uint32_t debounceTime = 500;
 
 
 
@@ -222,12 +224,10 @@ void SaveSeed(uint32_t seed) {
     dataToWrite[3] = seed & 0xFF;
 
     if (BSP_QSPI_Init() != QSPI_OK) {
-//        HAL_UART_Transmit(&huart1, (uint8_t *)"QSPI Init Failed\r\n", 18, HAL_MAX_DELAY);
         Error_Handler();
     }
 
     if (BSP_QSPI_Erase_Sector(SEED_FLASH_ADDRESS) != QSPI_OK) {
-//        HAL_UART_Transmit(&huart1, (uint8_t *)"QSPI Erase Failed\r\n", 19, HAL_MAX_DELAY);
         Error_Handler();
     }
 
@@ -236,27 +236,18 @@ void SaveSeed(uint32_t seed) {
     }
 
     if (BSP_QSPI_Write(dataToWrite, SEED_FLASH_ADDRESS, sizeof(dataToWrite)) != QSPI_OK) {
-//        HAL_UART_Transmit(&huart1, (uint8_t *)"QSPI Write Failed\r\n", 20, HAL_MAX_DELAY);
         Error_Handler();
     }
-
-    // Print the bytes being saved
-//    char seedDataBuffer[64];
-//    snprintf(seedDataBuffer, sizeof(seedDataBuffer), "Saving Seed: %lu [Bytes: 0x%02X 0x%02X 0x%02X 0x%02X]\r\n",
-//             seed, dataToWrite[0], dataToWrite[1], dataToWrite[2], dataToWrite[3]);
-//    HAL_UART_Transmit(&huart1, (uint8_t *)seedDataBuffer, strlen(seedDataBuffer), HAL_MAX_DELAY);
 }
 
 uint32_t LoadSeed(void) {
     uint8_t dataRead[4];
 
     if (BSP_QSPI_Init() != QSPI_OK) {
-//        HAL_UART_Transmit(&huart1, (uint8_t *)"QSPI Init Failed\r\n", 18, HAL_MAX_DELAY);
         Error_Handler();
     }
 
     if (BSP_QSPI_Read(dataRead, SEED_FLASH_ADDRESS, sizeof(dataRead)) != QSPI_OK) {
-//        HAL_UART_Transmit(&huart1, (uint8_t *)"QSPI Read Failed\r\n", 19, HAL_MAX_DELAY);
         Error_Handler();
     }
 
@@ -266,25 +257,17 @@ uint32_t LoadSeed(void) {
         seed = DEFAULT_SEED;
     }
 
-    // Print the bytes being loaded
-//    char seedDataBuffer[64];
-//    snprintf(seedDataBuffer, sizeof(seedDataBuffer), "Loaded Seed: %lu [Bytes: 0x%02X 0x%02X 0x%02X 0x%02X]\r\n",
-//             seed, dataRead[0], dataRead[1], dataRead[2], dataRead[3]);
-//    HAL_UART_Transmit(&huart1, (uint8_t *)seedDataBuffer, strlen(seedDataBuffer), HAL_MAX_DELAY);
-
     return seed;
 }
 
 int DetectMovement(void) {
-	// measure
+	// get sensor data
     float gyroData[3];
     int16_t accelData[3];
-
-
     BSP_GYRO_GetXYZ(gyroData);
     BSP_ACCELERO_AccGetXYZ(accelData);
 
-    // direction string to print
+    // detected direction
     int newDirection = 0;
 
     // current time
@@ -308,13 +291,6 @@ int DetectMovement(void) {
         // update direction
     	currentDirection = newDirection;
         lastChangeTime = currentTime;
-
-        // print, for debug since we'll return direction
-        if (currentDirection != 0) {
-//            char buf[50];
-//            snprintf(buf, sizeof(buf), "Move %d\r\n", currentDirection);
-//            HAL_UART_Transmit(&huart1, (uint8_t *)buf, strlen(buf), HAL_MAX_DELAY);
-        }
     }
 
     return currentDirection;
@@ -350,18 +326,12 @@ void PrintTreasureGrid(void) {
     grid[treasureRow][treasureCol] = 'x'; // Treasure location
     grid[playerRow][playerCol] = '*';    // Player location
 
-    // Log the treasure's location internally
-//    snprintf(treasureBuffer, sizeof(treasureBuffer), "Treasure is at: [%d, %d]\r\n", treasureRow + 1, treasureCol + 1);
-//    HAL_UART_Transmit(&huart1, (uint8_t *)treasureBuffer, strlen(treasureBuffer), HAL_MAX_DELAY);
-
-    // Transmit the grid with borders
+    // format output
     for (int i = 0; i <= 4; i++) {  // Includes the top and bottom border
         if (i == 0) {
-            // Transmit the top/bottom border
             snprintf(displayBuffer, sizeof(displayBuffer), "+---+---+---+---+\r\n");
             HAL_UART_Transmit(&huart1, (uint8_t *)displayBuffer, strlen(displayBuffer), HAL_MAX_DELAY);
         } else {
-            // Transmit a row with cell separators
             char rowBuffer[32] = "|";  // Start with the first border
             for (int j = 0; j < 4; j++) {
                 char cell[8];
@@ -371,7 +341,6 @@ void PrintTreasureGrid(void) {
             snprintf(displayBuffer, sizeof(displayBuffer), "%s\r\n", rowBuffer);
             HAL_UART_Transmit(&huart1, (uint8_t *)displayBuffer, strlen(displayBuffer), HAL_MAX_DELAY);
 
-            // Transmit the horizontal separator
             snprintf(displayBuffer, sizeof(displayBuffer), "+---+---+---+---+\r\n");
             HAL_UART_Transmit(&huart1, (uint8_t *)displayBuffer, strlen(displayBuffer), HAL_MAX_DELAY);
         }
@@ -438,14 +407,7 @@ void Move(void) {
 
         }
 
-
-
-
-
-
-
         for(int i = 0; i< victoryLength; i++){
-
 
          uint32_t nextNote = victoryMelody[i]; // Get the current note
    	     uint32_t duration = victoryDurations[i]; // Get the current duration
@@ -465,11 +427,10 @@ void Move(void) {
 
    	     // Increment the index to play the next note
 
-        // maybe reset here?
     }
     else {
     	if (playerRow > treasureRow && playerCol > treasureCol) {
-    		const char winMessage[] = "The treasure further up, maybe left?\r\n";
+    		const char winMessage[] = "The treasure further up,\r\nmaybe left?\r\n";
     		HAL_UART_Transmit(&huart1, (uint8_t *)winMessage, strlen(winMessage), HAL_MAX_DELAY);
     		HAL_Delay(1000);
     	}
@@ -494,7 +455,7 @@ void Move(void) {
     		HAL_Delay(1000);
     	}
     	else if(playerCol == treasureCol) {
-    		const char winMessage[] = "you should keep climbing up, or maybe down? you decide.\r\n";
+    		const char winMessage[] = "you should keep climbing up, \r\nor maybe down? you decide.\r\n";
     		HAL_UART_Transmit(&huart1, (uint8_t *)winMessage, strlen(winMessage), HAL_MAX_DELAY);
     		HAL_Delay(1000);
     	}
@@ -522,9 +483,10 @@ int main(void)
 
   /* USER CODE BEGIN Init */
 
-
-//  uint32_t resetHS = 1000;
+//  // ----- code to reset high score-----
+//  uint32_t resetHS = 10;
 //  SaveHighScore(resetHS);
+
   BSP_GYRO_Init();
   BSP_ACCELERO_Init();
 
@@ -566,11 +528,6 @@ int main(void)
   // Generate a seed by combining gyro and accel values
   uint32_t combinedSeed = (gyroX ^ gyroY ^ gyroZ) + (accelX ^ accelY ^ accelZ);
 
-  // Log the generated seed
-//  char seedBuffer[64];
-//  snprintf(seedBuffer, sizeof(seedBuffer), "Generated Seed: %lu\r\n", combinedSeed);
-//  HAL_UART_Transmit(&huart1, (uint8_t *)seedBuffer, strlen(seedBuffer), HAL_MAX_DELAY);
-
   // Seed the random number generator
   srand(combinedSeed);
 
@@ -590,7 +547,6 @@ int main(void)
   generateArray(notes[i], PRECISION, array_size[i]);
  }
 
-
  char highScoreBuffer[50];
  snprintf(highScoreBuffer, sizeof(highScoreBuffer), "High Score: %d\r\n", LoadHighScore());
  HAL_UART_Transmit(&huart1, (uint8_t *)highScoreBuffer, strlen(highScoreBuffer), HAL_MAX_DELAY);
@@ -604,7 +560,6 @@ int main(void)
 
 //  PrintInitialGrid();
   // Print the updated number of moves
-
   const char newline[] = "\r\n";
   HAL_UART_Transmit(&huart1, (uint8_t *)newline, strlen(newline), HAL_MAX_DELAY);
   while (!gameover)
